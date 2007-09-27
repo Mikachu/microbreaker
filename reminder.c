@@ -6,10 +6,15 @@
 #include <stdlib.h>
 
 #include "gtkunion.h"
+#include "reminder.h"
+
+GSList *actions = NULL;
 
 void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
                  gchar *new_text, gpointer data)
-{}
+{
+  /* Update stuff from here */
+}
 
 Treeviewcolumn new_column(const gchar *name, Liststore store)
 {
@@ -32,12 +37,16 @@ Treeviewcolumn new_column(const gchar *name, Liststore store)
 
 GtkWidget *create_settings()
 {
-  Vbox vbox;
+  Vbox vbox; /* This contains all elements */
+  Hbox hbox; /* This contains the buttons at the bottom */
   Scrolledwindow scroll;
   Treeview treeview;
   Liststore liststore;
+  const GSList *i = actions;
+  GtkTreeIter iter;
 
-  liststore.l = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_STRING);
+  /* Create a new liststore and attach it to a treeview with two text columns */
+  liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
 
   treeview.w = gtk_tree_view_new_with_model(liststore.t);
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
@@ -45,6 +54,15 @@ GtkWidget *create_settings()
 
   gtk_tree_view_insert_column(treeview.t, new_column("Task", liststore).c, -1);
   gtk_tree_view_insert_column(treeview.t, new_column("Interval", liststore).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Last Done", liststore).c, -1);
+
+  while (i) {
+    Action *a = (Action *) (i->data);
+
+    gtk_list_store_append(liststore.l, &iter);
+    gtk_list_store_set(liststore.l, &iter, 0, a->name, 1, a->interval, 2, a->lastdone, -1);
+    i = g_slist_next(i);
+  }
 
   vbox.w = gtk_vbox_new(FALSE, 5);
   scroll.w = gtk_scrolled_window_new(NULL, NULL);
@@ -72,11 +90,97 @@ Window create_dialog()
   return dialog;
 }
 
+void load_actions()
+{
+  gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
+  GKeyFile *key_file = g_key_file_new();
+
+  if (!g_key_file_load_from_file(key_file, config_file, G_KEY_FILE_KEEP_COMMENTS, NULL))
+    /* No config file */
+    goto noconf;
+
+  gchar **action_names;
+  gchar **i;
+  GSList *j;
+  gsize n;
+
+  j = actions;
+  /* Clear old list */
+  while (j) {
+    Action *action = (Action *) (j->data);
+
+    free(action->name);
+    j = g_slist_next(j);
+  }
+  g_slist_free(actions);
+  actions = NULL;
+
+  /* Load new list */
+  action_names = g_key_file_get_groups(key_file, NULL);
+  for (i = action_names; i; i++) {
+    Action *a;
+
+    a = (Action *) malloc(sizeof(Action));
+    a->name = *i;
+    a->interval = g_key_file_get_integer(key_file, *i, "interval", NULL);
+    a->lastdone = g_key_file_get_integer(key_file, *i, "lastdone", NULL);
+    actions = g_slist_append(actions, a);
+  }
+  /* The strings in this array are saved in a->name so don't free them
+   * with g_strfreev */
+  g_free(action_names);
+  g_key_file_free(key_file);
+noconf:
+  g_free(config_file);
+}
+
+void write_keyfile(GKeyFile *key_file, const gchar *config_file)
+{
+  char *contents = g_key_file_to_data(key_file, NULL, NULL);
+  FILE *config_file_handle = fopen(config_file, "w");
+  if (!config_file_handle) {
+    perror("reminder");
+    exit(1);
+  }
+
+  fputs(contents, config_file_handle);
+  fclose(config_file_handle);
+  g_free(contents);
+}
+
+void save_actions()
+{
+  gchar *config_dir = g_build_filename(g_get_user_config_dir(), "reminder", NULL);
+  gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
+  GSList *j = actions;
+  GKeyFile *key_file = g_key_file_new();
+
+  if (!g_mkdir_with_parents(config_dir, 0700)) {
+    perror("reminder");
+    exit(1);
+  }
+
+  while (j) {
+    Action *a = (Action *) (j->data);
+
+    g_key_file_set_integer(key_file, a->name, "interval", a->interval);
+    g_key_file_set_integer(key_file, a->name, "lastdone", a->lastdone);
+    j = g_slist_next(j);
+  }
+
+  write_keyfile(key_file, config_file);
+  g_key_file_free(key_file);
+  g_free(config_dir);
+  g_free(config_file);
+}
+
 int main(int argc, char *argv[])
 {
   Window dialog;
 
   gtk_init(&argc, &argv);
+
+  load_actions();
 
   dialog = create_dialog();
 

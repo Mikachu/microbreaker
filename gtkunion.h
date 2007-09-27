@@ -10,6 +10,13 @@ typedef union {
 } Liststore;
 
 typedef union {
+  GtkHBox *v;
+  GtkContainer *c;
+  GtkBox *b;
+  GtkWidget *w;
+} Hbox;
+
+typedef union {
   GtkVBox *v;
   GtkContainer *c;
   GtkBox *b;
