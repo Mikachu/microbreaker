@@ -16,7 +16,7 @@ void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
   /* Update stuff from here */
 }
 
-Treeviewcolumn new_column(const gchar *name, Liststore store)
+Treeviewcolumn new_column(const gchar *name, Liststore store, gint c)
 {
   Treeviewcolumn column;
   Cellrenderer renderer;
@@ -26,7 +26,7 @@ Treeviewcolumn new_column(const gchar *name, Liststore store)
   g_object_set_data(renderer.o, "column", GINT_TO_POINTER(0));
   g_signal_connect(renderer.o, "edited", G_CALLBACK(cell_edited), store.t);
 
-  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", 0, NULL);
+  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", c, NULL);
   g_object_set(column.o, "resizable", TRUE,
                          "sizing", GTK_TREE_VIEW_COLUMN_FIXED,
                          "min-width", 50,
@@ -52,9 +52,9 @@ GtkWidget *create_settings()
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
   gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
 
-  gtk_tree_view_insert_column(treeview.t, new_column("Task", liststore).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_column("Interval", liststore).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_column("Last Done", liststore).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Task", liststore, 0).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Interval", liststore, 1).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Last Done", liststore, 2).c, -1);
 
   while (i) {
     Action *a = (Action *) (i->data);
@@ -117,7 +117,7 @@ void load_actions()
 
   /* Load new list */
   action_names = g_key_file_get_groups(key_file, NULL);
-  for (i = action_names; i; i++) {
+  for (i = action_names; *i; i++) {
     Action *a;
 
     a = (Action *) malloc(sizeof(Action));
