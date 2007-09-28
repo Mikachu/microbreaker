@@ -36,6 +36,7 @@ typedef union {
 
 typedef union {
   GtkCellRenderer *r;
+  GtkCellRendererText *t;
   GObject *o;
 } Cellrenderer;
 

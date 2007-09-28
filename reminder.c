@@ -14,10 +14,27 @@ void save_actions();
 void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
                  gchar *new_text, gpointer data)
 {
-  printf("%s\n", new_text);
+  Cellrenderer renderer;
+  Liststore store;
+  GtkTreeIter iter;
+  GtkTreePath *path = gtk_tree_path_new_from_string(path_string);
+  gint column;
+
+  renderer.t = cell;
+  store.t = GTK_TREE_MODEL(data);
+  column = GPOINTER_TO_INT(g_object_get_data(renderer.o, "column"));
+
+  gtk_tree_model_get_iter(store.t, &iter, path);
+
+  gtk_list_store_set(store.l, &iter, column, new_text, -1);
+
 }
 
 void new_action()
+{
+}
+
+void delete_selected_action()
 {
 }
 
@@ -28,7 +45,7 @@ Treeviewcolumn new_column(const gchar *name, Liststore store, gint c)
 
   renderer.r = gtk_cell_renderer_text_new();
   g_object_set(renderer.o, "editable", TRUE, NULL);
-  g_object_set_data(renderer.o, "column", GINT_TO_POINTER(0));
+  g_object_set_data(renderer.o, "column", GINT_TO_POINTER(c));
   g_signal_connect(renderer.o, "edited", G_CALLBACK(cell_edited), store.t);
 
   column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", c, NULL);
@@ -94,6 +111,11 @@ GtkWidget *create_settings()
   /* New button */
   button.w = gtk_button_new_with_mnemonic("_New");
   g_signal_connect(button.o, "clicked", G_CALLBACK(new_action), NULL);
+  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  /* Delete button */
+  button.w = gtk_button_new_with_mnemonic("_Delete");
+  g_signal_connect(button.o, "clicked", G_CALLBACK(delete_selected_action), NULL);
   gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
 
   gtk_box_pack_start(vbox.b, hbox.w, FALSE, FALSE, 0);
