@@ -11,32 +11,29 @@
 GSList *actions = NULL;
 
 void cell_edited(Cellrenderertext cell, const gchar *path_string,
-                 gchar *new_text, gpointer data)
+                 gchar *new_text, Liststore liststore)
 {
   Cellrenderer renderer;
-  Liststore store;
   Treeiter iter;
   Treepath path = gtk_tree_path_new_from_string(path_string);
   gint column;
 
   renderer.t = cell;
-  store.t = GTK_TREE_MODEL(data);
   column = GPOINTER_TO_INT(g_object_get_data(renderer.o, "column"));
 
-  gtk_tree_model_get_iter(store.t, &iter, path);
+  gtk_tree_model_get_iter(liststore.t, &iter, path);
 
-  gtk_list_store_set(store.l, &iter, column, column > 0 ? GINT_TO_POINTER(atoi(new_text)) : new_text, -1);
+  gtk_list_store_set(liststore.l, &iter, column,
+                     column > 0 ? GINT_TO_POINTER(atoi(new_text)) : new_text, -1);
 }
 
-void new_action(Button button, gpointer data)
+void new_action(Button button, Treeview treeview)
 {
-  Treeview treeview;
   Liststore liststore;
   Treeiter iter;
   Treeselection selection;
   Treepath path;
 
-  treeview.t = GTK_TREE_VIEW(data);
   selection.s = gtk_tree_view_get_selection(treeview.t);
   liststore.t = gtk_tree_view_get_model(treeview.t);
   if (gtk_tree_selection_get_selected(selection.s, NULL, &iter))
@@ -51,14 +48,12 @@ void new_action(Button button, gpointer data)
   gtk_tree_path_free(path);
 }
 
-void delete_selected_action(Button button, gpointer data)
+void delete_selected_action(Button button, Treeview treeview)
 {
-  Treeview treeview;
   Liststore liststore;
   Treeiter iter;
   Treeselection selection;
 
-  treeview.t = GTK_TREE_VIEW(data);
   selection.s = gtk_tree_view_get_selection(treeview.t);
   if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
     liststore.t = gtk_tree_view_get_model(treeview.t);
@@ -66,11 +61,8 @@ void delete_selected_action(Button button, gpointer data)
   }
 }
 
-void selected_action(Treeselection selection, gpointer data)
+void selected_action(Treeselection selection, Button delete)
 {
-  Button delete;
-  
-  delete.b = GTK_BUTTON(data);
   gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection.s, NULL, NULL));
 }
 
@@ -135,18 +127,15 @@ void write_keyfile(GKeyFile *key_file, const gchar *config_file)
 /* This function first clears the action list
  * then fills it in from the list store
  * then stores the list in the keyfile */
-void save_actions(Button button, gpointer data)
+void save_actions(Button button, Treeview treeview)
 {
   gchar *config_dir = g_build_filename(g_get_user_config_dir(), "reminder", NULL);
   gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
   GSList *j;
   GKeyFile *key_file = g_key_file_new();
   Liststore liststore;
-  Treeview treeview;
   Treeiter iter;
   gboolean valid;
-
-  treeview.t = GTK_TREE_VIEW(data);
 
   if (g_mkdir_with_parents(config_dir, 0700) == -1) {
     perror("reminder: couldn't create dir");
