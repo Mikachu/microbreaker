@@ -1,7 +1,8 @@
 typedef union {
-  GtkWidget *d;
-  GtkWindow *w;
+  GtkWidget *w;
+  GtkWindow *d;
   GtkContainer *c;
+  GObject *o;
 } Window;
 
 typedef union {

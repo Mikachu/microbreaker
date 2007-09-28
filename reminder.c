@@ -276,15 +276,38 @@ Widget create_settings()
   return vbox.w;
 }
 
+gboolean handle_reply(Widget widget, gint response, Window dialog)
+{
+  if (response == GTK_RESPONSE_YES)
+    gtk_widget_hide(dialog.w);
+
+  gtk_widget_destroy(widget);
+  
+  return TRUE;
+}
+
+gboolean confirm_close(Window dialog, gpointer event, gpointer data)
+{
+  Window confirm;
+
+  confirm.w =
+    gtk_message_dialog_new(dialog.d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+                           GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+                           "There may be unsaved changes, close window anyway?");
+  g_signal_connect(confirm.o, "response", G_CALLBACK(handle_reply), dialog.w);
+  gtk_widget_show_all(confirm.w);
+  return TRUE;
+}
+
 Window create_dialog()
 {
   Window dialog;
 
-  dialog.d = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(dialog.w, "Reminder");
-  gtk_window_set_default_size(dialog.w, 400, 600);
-  gtk_window_set_position(dialog.w, GTK_WIN_POS_CENTER);
-  g_signal_connect(dialog.d, "delete-event", G_CALLBACK(exit /* Some function that asks for saving any changes before closing */), 0);
+  dialog.w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title(dialog.d, "Reminder");
+  gtk_window_set_default_size(dialog.d, 400, 600);
+  gtk_window_set_position(dialog.d, GTK_WIN_POS_CENTER);
+  g_signal_connect(dialog.w, "delete-event", G_CALLBACK(confirm_close), 0);
 
   gtk_container_add(dialog.c, create_settings());
 
@@ -301,7 +324,7 @@ int main(int argc, char *argv[])
 
   dialog = create_dialog();
 
-  gtk_widget_show_all(dialog.d);
+  gtk_widget_show_all(dialog.w);
   gtk_main();
 
   return 0;
