@@ -32,16 +32,11 @@ void cell_toggled(Cellrenderer renderer, const gchar *path_string,
 
   gtk_tree_model_get_iter(liststore.t, &iter, path);
   gtk_tree_model_get(liststore.t, &iter, 3, &value, -1);
-  if (value) {
-    GTimeVal time;
-    value = FALSE;
-    time.tv_sec = get_epochseconds();
-    time.tv_usec = 0;
-    gtk_list_store_set(liststore.l, &iter,
-                       2, g_time_val_to_iso8601(&time),
-                       3, FALSE,
-                       -1);
-  }
+  value = FALSE;
+  gtk_list_store_set(liststore.l, &iter,
+                     2, get_iso8601(),
+                     3, FALSE,
+                     -1);
 
   gtk_tree_path_free(path);
 }
