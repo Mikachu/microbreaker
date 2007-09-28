@@ -9,6 +9,8 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
+#include "Alert.xpm"
+#include "Alert.xbm"
 #include "Idle.xpm"
 #include "Idle.xbm"
 #include <X11/extensions/shape.h>
@@ -17,7 +19,15 @@
 #include "gtkunion.h"
 
 Gtkwindow dialog;
-Button button;
+Plug dockchild;
+Window dockapp;
+GdkPixmap *alert_pixmap;
+GdkBitmap *alert_mask;
+Pixmap     alert_xmask;
+GdkPixmap *idle_pixmap;
+GdkBitmap *idle_mask;
+Pixmap     idle_xmask;
+Image image;
 
 glong get_epochseconds()
 {
@@ -31,6 +41,19 @@ const gchar *get_iso8601()
   GTimeVal time;
   g_get_current_time(&time);
   return g_time_val_to_iso8601(&time);
+}
+
+void set_icon_alert(gboolean alert)
+{
+  if (alert) {
+    gtk_image_set_from_pixmap(image.i, alert_pixmap, alert_mask);
+    gdk_window_shape_combine_mask(dockchild.w->window, alert_mask, 0, 0);
+    XShapeCombineMask(GDK_DISPLAY(), dockapp, ShapeBounding, 0, 0, alert_xmask, ShapeSet);
+  } else {
+    gtk_image_set_from_pixmap(image.i, idle_pixmap, idle_mask);
+    gdk_window_shape_combine_mask(dockchild.w->window, idle_mask, 0, 0);
+    XShapeCombineMask(GDK_DISPLAY(), dockapp, ShapeBounding, 0, 0, idle_xmask, ShapeSet);
+  }
 }
 
 void cell_toggled(Cellrenderer renderer, const gchar *path_string,
@@ -281,13 +304,13 @@ gboolean check_actions(Liststore liststore)
     else if ((now - lastdone.tv_sec)/(60*60) >= interval)
     {
       gtk_list_store_set(liststore.l, &iter, 3, TRUE, -1);
-      gtk_button_set_label(button.b, name);
+      set_icon_alert(TRUE);
       all_handled = FALSE;
     }
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
   if (all_handled)
-    gtk_button_set_label(button.b, "Reminder");
+    set_icon_alert(FALSE);
   return TRUE;
 }
 
@@ -377,20 +400,19 @@ Gtkwindow create_dialog()
   return dialog;
 }
 
-void gtk_widget_show_all_data(Button button, Gtkwindow dialog)
+gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwindow dialog)
 {
-  gtk_widget_show_all(dialog.w);
+  if (event->button == 1) {
+    gtk_widget_show_all(dialog.w);
+    return TRUE;
+  }
+  return FALSE;
 }
 
 /* I'm sorry if this code offends anyone :) */
 void create_dockapp(Gtkwindow dialog, int argc, char *argv[])
 {
-  Plug dockchild;
-  Window dockapp;
   XWMHints *wm_hints;
-  GtkWidget *idle;
-  GdkPixmap *icon;
-  GdkBitmap *icon_mask;
   Pixmap xmask;
 
   dockapp = XCreateSimpleWindow(GDK_DISPLAY(), GDK_ROOT_WINDOW(), 0, 0, 64, 24, 0, 0, 0);
@@ -405,24 +427,26 @@ void create_dockapp(Gtkwindow dialog, int argc, char *argv[])
 
   dockchild.w = gtk_plug_new(0);
   gtk_widget_add_events(dockchild.w, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
-
-  button.w = gtk_button_new_with_label("Reminder");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(gtk_widget_show_all_data), dialog.o);
-//  gtk_container_add(dockchild.c, button.w);
-  gtk_button_set_relief(button.b, GTK_RELIEF_NONE);
+  g_signal_connect(dockchild.w, "button-release-event", G_CALLBACK(handle_dock_event), dialog.o);
   gtk_window_set_default_size(dockchild.d, 64, 24);
 
   gtk_widget_realize(dockchild.w);
-  icon_mask = gdk_bitmap_create_from_data(dockchild.w->window,
+
+  alert_mask = gdk_bitmap_create_from_data(dockchild.w->window,
+                                          Alert_bits, Alert_width, Alert_height);
+  alert_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, NULL, NULL, Alert_xpm);
+  alert_xmask = XCreateBitmapFromData(GDK_DISPLAY(), GDK_ROOT_WINDOW(),
+                                Alert_bits, Alert_width, Alert_height);
+
+  idle_mask = gdk_bitmap_create_from_data(dockchild.w->window,
                                           Idle_bits, Idle_width, Idle_height);
-  icon = gdk_pixmap_create_from_xpm_d(dockchild.w->window, NULL, NULL, Idle_xpm);
-  idle = gtk_image_new_from_pixmap(icon, icon_mask);
-  gtk_container_add(dockchild.c, idle);
-  gdk_window_shape_combine_mask(dockchild.w->window, icon_mask, 0, 0);
-  xmask = XCreateBitmapFromData(GDK_DISPLAY(), GDK_ROOT_WINDOW(),
+  idle_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, NULL, NULL, Idle_xpm);
+  idle_xmask = XCreateBitmapFromData(GDK_DISPLAY(), GDK_ROOT_WINDOW(),
                                 Idle_bits, Idle_width, Idle_height);
-  XShapeCombineMask(GDK_DISPLAY(), dockapp, ShapeBounding, 0, 0, xmask, ShapeSet);
-  g_signal_connect(idle, "button-release-event", G_CALLBACK(gtk_widget_show_all_data), dialog.o);
+
+  image.w = gtk_image_new();
+  set_icon_alert(FALSE);
+  gtk_container_add(dockchild.c, image.w);
 
   gtk_widget_show_all(dockchild.w);
 

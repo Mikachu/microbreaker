@@ -67,6 +67,12 @@ typedef union {
   GObject *o;
 } Button;
 
+typedef union {
+  GtkImage *i;
+  GtkWidget *w;
+  GObject *o;
+} Image;
+
 typedef GtkCellRendererText* Cellrenderertext;
 typedef GtkTreeIter Treeiter;
 typedef GtkTreePath* Treepath;
