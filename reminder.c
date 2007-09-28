@@ -30,8 +30,22 @@ void cell_edited(Cellrenderertext cell, const gchar *path_string,
 
   gtk_tree_model_get_iter(liststore.t, &iter, path);
 
-  gtk_list_store_set(liststore.l, &iter, column,
-                     column > 0 ? GINT_TO_POINTER(atoi(new_text)) : new_text, -1);
+  switch (column) {
+    case 0: /* name */
+      gtk_list_store_set(liststore.l, &iter, column, new_text, -1);
+      break;
+    case 1: /* interval */
+      gtk_list_store_set(liststore.l, &iter, column, GINT_TO_POINTER(atoi(new_text)), -1);
+      break;
+    case 2: /* last done date */
+      {
+        GTimeVal time;
+        time.tv_sec = atoi(new_text);
+        time.tv_usec = 0;
+        gtk_list_store_set(liststore.l, &iter, column, g_time_val_to_iso8601(&time), -1);
+      }
+      break;
+  }
 }
 
 void new_action(Button button, Treeview treeview)
@@ -216,7 +230,7 @@ Widget create_settings()
   Treeselection selection;
 
   /* Create a new liststore and attach it to a treeview */
-  liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
+  liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING);
 
   treeview.w = gtk_tree_view_new_with_model(liststore.t);
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
@@ -229,9 +243,12 @@ Widget create_settings()
   /* Load up our actions into the liststore */
   while (i) {
     Action *a = (Action *) (i->data);
+    GTimeVal time;
+    time.tv_sec = a->lastdone;
+    time.tv_usec = 0;
 
     gtk_list_store_append(liststore.l, &iter);
-    gtk_list_store_set(liststore.l, &iter, 0, a->name, 1, a->interval, 2, a->lastdone, -1);
+    gtk_list_store_set(liststore.l, &iter, 0, a->name, 1, a->interval, 2, g_time_val_to_iso8601(&time), -1);
     i = g_slist_next(i);
   }
 
