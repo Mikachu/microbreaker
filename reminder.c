@@ -10,6 +10,13 @@
 
 GSList *actions = NULL;
 
+glong get_epochseconds()
+{
+  GTimeVal time;
+  g_get_current_time(&time);
+  return time.tv_sec;
+}
+
 void cell_edited(Cellrenderertext cell, const gchar *path_string,
                  gchar *new_text, Liststore liststore)
 {
@@ -40,7 +47,11 @@ void new_action(Button button, Treeview treeview)
     gtk_list_store_insert_before(liststore.l, &iter, &iter);
   else
     gtk_list_store_insert_before(liststore.l, &iter, NULL);
-  gtk_list_store_set(liststore.l, &iter, 0, "", 1, GINT_TO_POINTER(0), 2, GINT_TO_POINTER(0), -1);
+  gtk_list_store_set(liststore.l, &iter,
+                     0, "",
+                     1, GINT_TO_POINTER(24),
+                     2, GINT_TO_POINTER(get_epochseconds),
+                     -1);
   path = gtk_tree_model_get_path(liststore.t, &iter);
   gtk_tree_selection_select_path(selection.s, path);
   gtk_tree_view_scroll_to_cell(treeview.t, path, NULL, FALSE, 0.0, 0.0);
