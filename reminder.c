@@ -133,11 +133,11 @@ void load_actions(Liststore liststore)
                        3, FALSE,
                        -1);
   }
-  /* The strings in this array are saved in a->name so don't free them
+  /* The strings in this array are saved in the liststore so don't free them
    * with g_strfreev */
   g_free(action_names);
-  g_key_file_free(key_file);
 noconf:
+  g_key_file_free(key_file);
   g_free(config_file);
 }
 
@@ -388,8 +388,6 @@ int main(int argc, char *argv[])
 
   gtk_widget_show_all(dialog.w);
   gtk_main();
-
-//  printf("%li\n", get_epochseconds());
 
   return 0;
 }
