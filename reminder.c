@@ -265,12 +265,12 @@ Widget create_settings()
   return vbox.w;
 }
 
-gboolean handle_reply(Widget widget, gint response, Window dialog)
+gboolean handle_reply(Window confirm, gint response, Window dialog)
 {
   if (response == GTK_RESPONSE_YES)
     gtk_widget_hide(dialog.w);
 
-  gtk_widget_destroy(widget);
+  gtk_widget_destroy(confirm.w);
   
   return TRUE;
 }
