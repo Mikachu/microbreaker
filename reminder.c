@@ -9,7 +9,6 @@
 #include "reminder.h"
 
 GSList *actions = NULL;
-void save_actions();
 
 void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
                  gchar *new_text, gpointer data)
@@ -95,24 +94,48 @@ void write_keyfile(GKeyFile *key_file, const gchar *config_file)
   g_free(contents);
 }
 
-void save_actions()
+void save_actions(GtkButton *button, gpointer data)
 {
   gchar *config_dir = g_build_filename(g_get_user_config_dir(), "reminder", NULL);
   gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
-  GSList *j = actions;
+  GSList *j;
   GKeyFile *key_file = g_key_file_new();
+  Liststore liststore;
+  Treeview treeview;
+  GtkTreeIter iter;
+  gboolean valid;
+
+  treeview.t = GTK_TREE_VIEW(data);
 
   if (g_mkdir_with_parents(config_dir, 0700) == -1) {
     perror("reminder: couldn't create dir");
     exit(1);
   }
 
-  while (j) {
+  for (j = actions; j; j = g_slist_next(j)) {
+    Action *a = (Action *) (j->data);
+    free(a->name);
+  }
+  g_slist_free(actions);
+  actions = NULL;
+
+  liststore.t = gtk_tree_view_get_model(treeview.t);
+  valid = gtk_tree_model_get_iter_first(liststore.t, &iter);
+
+  while (valid) {
+    Action *a;
+    
+    a = (Action *) malloc(sizeof(Action));
+    gtk_tree_model_get(liststore.t, &iter, 0, &a->name, 1, &a->interval, 2, &a->lastdone, -1);
+    actions = g_slist_append(actions, a);
+    valid = gtk_tree_model_iter_next(liststore.t, &iter);
+  }
+
+  for (j = actions; j; j = g_slist_next(j)) {
     Action *a = (Action *) (j->data);
 
     g_key_file_set_integer(key_file, a->name, "interval", a->interval);
     g_key_file_set_integer(key_file, a->name, "lastdone", a->lastdone);
-    j = g_slist_next(j);
   }
 
   write_keyfile(key_file, config_file);
@@ -188,7 +211,7 @@ GtkWidget *create_settings()
 
   /* Save button */
   button.w = gtk_button_new_with_mnemonic("_Save");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(save_actions), NULL);
+  g_signal_connect(button.o, "clicked", G_CALLBACK(save_actions), treeview.t);
   gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
 
   /* New button */
