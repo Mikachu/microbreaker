@@ -36,6 +36,14 @@ void delete_selected_action()
 {
 }
 
+void selected_action(GtkTreeSelection *selection, gpointer data)
+{
+  Button delete;
+  
+  delete.b = GTK_BUTTON(data);
+  gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection, NULL, NULL));
+}
+
 void load_actions()
 {
   gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
@@ -172,6 +180,7 @@ GtkWidget *create_settings()
   Liststore liststore;
   const GSList *i = actions;
   GtkTreeIter iter;
+  Treeselection selection;
 
   /* Create a new liststore and attach it to a treeview */
   liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
@@ -224,6 +233,10 @@ GtkWidget *create_settings()
   g_signal_connect(button.o, "clicked", G_CALLBACK(delete_selected_action), NULL);
   gtk_widget_set_sensitive(button.w, FALSE);
   gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  /* Pass the delete button so we can toggle sensitivity when columns are selected */
+  selection.s = gtk_tree_view_get_selection(treeview.t);
+  g_signal_connect(selection.o, "changed", G_CALLBACK(selected_action), button.w);
 
   gtk_box_pack_start(vbox.b, hbox.w, FALSE, FALSE, 0);
 
