@@ -103,7 +103,6 @@ void load_actions()
   gchar **action_names;
   gchar **i;
   GSList *j;
-  gsize n;
 
   j = actions;
   /* Clear old list */
@@ -121,7 +120,7 @@ void load_actions()
   for (i = action_names; *i; i++) {
     Action *a;
 
-    a = (Action *) malloc(sizeof(Action));
+    a = malloc(sizeof(Action));
     a->name = *i;
     a->interval = g_key_file_get_integer(key_file, *i, "interval", NULL);
     a->lastdone = g_key_file_get_integer(key_file, *i, "lastdone", NULL);
@@ -180,7 +179,7 @@ void save_actions(Button button, Treeview treeview)
   while (valid) {
     Action *a;
     
-    a = (Action *) malloc(sizeof(Action));
+    a = malloc(sizeof(Action));
     gtk_tree_model_get(liststore.t, &iter, 0, &a->name, 1, &a->interval, 2, &a->lastdone, -1);
     actions = g_slist_append(actions, a);
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
