@@ -17,21 +17,25 @@ glong get_epochseconds()
   return time.tv_sec;
 }
 
-/* Oh dear god please die gtk+, why don't you pass the new state here? */
 void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                   Liststore liststore)
 {
   Treeiter iter;
   Treepath path = gtk_tree_path_new_from_string(path_string);
-  gint column;
   gboolean value;
 
-  column = GPOINTER_TO_INT(g_object_get_data(renderer.o, "column"));
-
   gtk_tree_model_get_iter(liststore.t, &iter, path);
-  gtk_tree_model_get(liststore.t, &iter, column, &value, -1);
-  value = !value;
-  gtk_list_store_set(liststore.l, &iter, column, value, -1);
+  gtk_tree_model_get(liststore.t, &iter, 3, &value, -1);
+  if (value) {
+    GTimeVal time;
+    value = FALSE;
+    time.tv_sec = get_epochseconds();
+    time.tv_usec = 0;
+    gtk_list_store_set(liststore.l, &iter,
+                       2, g_time_val_to_iso8601(&time),
+                       3, FALSE,
+                       -1);
+  }
 
   gtk_tree_path_free(path);
 }
@@ -255,6 +259,38 @@ Treeviewcolumn new_check_column(const gchar *name, Liststore store, gint c)
   return column;
 }
 
+void notify_expired(gchar *s)
+{
+  printf("do something clever %s\n", s);
+}
+
+/* Um, I have to rethink this whole linked list thing i guess, I just
+ * use the list store everywhere anyway */
+gboolean check_actions(Liststore liststore)
+{
+  GSList *j;
+  glong now = get_epochseconds();
+
+  for (j = actions; j; j = g_slist_next(j)) {
+    Action *a = j->data;
+    const gchar *iso;
+    GTimeVal time;
+    
+    gtk_tree_model_get(liststore.t, &a->iter,
+                       2, &iso,
+                       3, &a->expired,
+                       -1);
+    g_time_val_from_iso8601(iso, &time);
+    a->lastdone = time.tv_sec;
+    if (!a->expired && ((now - a->lastdone)/(60*24) > a->interval)) {
+      a->expired = TRUE;
+      gtk_list_store_set(liststore.l, &a->iter, 3, TRUE, -1);
+      notify_expired(a->name);
+    }
+  }
+  return TRUE;
+}
+
 Widget create_settings()
 {
   Vbox vbox; /* This contains all elements */
@@ -291,8 +327,11 @@ Widget create_settings()
                        1, a->interval,
                        2, g_time_val_to_iso8601(&time),
                        -1);
+    a->iter = iter;
     i = g_slist_next(i);
   }
+
+  g_timeout_add_seconds(1, check_actions, liststore.t);
 
   /* Put everything in a vbox */
   vbox.w = gtk_vbox_new(FALSE, 5);
@@ -373,26 +412,6 @@ Window create_dialog()
   return dialog;
 }
 
-void notify_expired(gchar *s)
-{
-  printf("do something clever %s\n", s);
-}
-
-gboolean check_actions(gpointer data)
-{
-  GSList *j;
-  glong now = get_epochseconds();
-
-  for (j = actions; j; j = g_slist_next(j)) {
-    Action *a = j->data;
-    if (!a->expired && ((now - a->lastdone)/(60*24) > a->interval)) {
-      a->expired = TRUE;
-      notify_expired(a->name);
-    }
-  }
-  return TRUE;
-}
-
 int main(int argc, char *argv[])
 {
   Window dialog;
@@ -402,8 +421,6 @@ int main(int argc, char *argv[])
   load_actions();
 
   dialog = create_dialog();
-
-  g_timeout_add_seconds(1, check_actions, NULL);
 
   gtk_widget_show_all(dialog.w);
   gtk_main();
