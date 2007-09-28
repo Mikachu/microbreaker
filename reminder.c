@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include "gtkunion.h"
-#include "reminder.h"
 
 glong get_epochseconds()
 {
@@ -119,17 +118,15 @@ void load_actions(Liststore liststore)
   action_names = g_key_file_get_groups(key_file, NULL);
   for (i = action_names; *i; i++) {
     Treeiter iter;
-    const gchar *name = *i;
+    const gchar *name = *i, *lastdone_iso;
     gint interval = g_key_file_get_integer(key_file, *i, "interval", NULL);
-    GTimeVal lastdone;
-    lastdone.tv_sec = g_key_file_get_integer(key_file, *i, "lastdone", NULL);
-    lastdone.tv_usec = 0;
+    lastdone_iso = g_key_file_get_string(key_file, *i, "lastdone", NULL);
 
     gtk_list_store_append(liststore.l, &iter);
     gtk_list_store_set(liststore.l, &iter,
                        0, name,
                        1, interval,
-                       2, g_time_val_to_iso8601(&lastdone),
+                       2, lastdone_iso,
                        3, FALSE,
                        -1);
   }
@@ -146,7 +143,7 @@ void write_keyfile(GKeyFile *key_file, const gchar *config_file)
   char *contents = g_key_file_to_data(key_file, NULL, NULL);
   FILE *config_file_handle = fopen(config_file, "w");
   if (!config_file_handle) {
-    perror("reminder");
+    perror("reminder: couldn't open config file for writing");
     exit(1);
   }
 
@@ -173,22 +170,18 @@ void save_actions(Button button, Treeview treeview)
   valid = gtk_tree_model_get_iter_first(liststore.t, &iter);
 
   while (valid) {
-    GTimeVal lastdone;
-    Action *a;
     const gchar *lastdone_iso, *name;
     gint interval;
     gboolean expired;
     
-    a = malloc(sizeof(Action));
     gtk_tree_model_get(liststore.t, &iter,
                        0, &name,
                        1, &interval,
                        2, &lastdone_iso,
                        3, &expired,
                        -1);
-    g_time_val_from_iso8601(lastdone_iso, &lastdone);
     g_key_file_set_integer(key_file, name, "interval", interval);
-    g_key_file_set_integer(key_file, name, "lastdone", lastdone.tv_sec);
+    g_key_file_set_string(key_file, name, "lastdone", lastdone_iso);
     g_key_file_set_integer(key_file, name, "expired", expired);
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
@@ -262,8 +255,9 @@ gboolean check_actions(Liststore liststore)
                        2, &lastdone_iso,
                        3, &expired,
                        -1);
-    g_time_val_from_iso8601(lastdone_iso, &lastdone);
-    if (!expired && ((now - lastdone.tv_sec)/(60*24) > interval)) {
+    if (!g_time_val_from_iso8601(lastdone_iso, &lastdone) ||
+        !expired && ((now - lastdone.tv_sec)/(60*24) > interval))
+    {
       gtk_list_store_set(liststore.l, &iter, 3, TRUE, -1);
       notify_expired(name);
     }
