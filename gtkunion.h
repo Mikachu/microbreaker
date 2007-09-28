@@ -55,3 +55,8 @@ typedef union {
   GtkWidget *w;
   GObject *o;
 } Button;
+
+typedef GtkCellRendererText* Cellrenderertext;
+typedef GtkTreeIter Treeiter;
+typedef GtkTreePath* Treepath;
+typedef GtkWidget* Widget;

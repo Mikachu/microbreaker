@@ -10,13 +10,13 @@
 
 GSList *actions = NULL;
 
-void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
+void cell_edited(Cellrenderertext cell, const gchar *path_string,
                  gchar *new_text, gpointer data)
 {
   Cellrenderer renderer;
   Liststore store;
-  GtkTreeIter iter;
-  GtkTreePath *path = gtk_tree_path_new_from_string(path_string);
+  Treeiter iter;
+  Treepath path = gtk_tree_path_new_from_string(path_string);
   gint column;
 
   renderer.t = cell;
@@ -28,50 +28,50 @@ void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
   gtk_list_store_set(store.l, &iter, column, column > 0 ? GINT_TO_POINTER(atoi(new_text)) : new_text, -1);
 }
 
-void new_action(GtkButton *button, gpointer data)
+void new_action(Button button, gpointer data)
 {
   Treeview treeview;
   Liststore liststore;
-  GtkTreeIter iter;
-  GtkTreeSelection *selection;
-  GtkTreePath *path;
+  Treeiter iter;
+  Treeselection selection;
+  Treepath path;
 
   treeview.t = GTK_TREE_VIEW(data);
-  selection = gtk_tree_view_get_selection(treeview.t);
+  selection.s = gtk_tree_view_get_selection(treeview.t);
   liststore.t = gtk_tree_view_get_model(treeview.t);
-  if (gtk_tree_selection_get_selected(selection, NULL, &iter))
+  if (gtk_tree_selection_get_selected(selection.s, NULL, &iter))
     gtk_list_store_insert_before(liststore.l, &iter, &iter);
   else
     gtk_list_store_insert_before(liststore.l, &iter, NULL);
   gtk_list_store_set(liststore.l, &iter, 0, "", 1, GINT_TO_POINTER(0), 2, GINT_TO_POINTER(0), -1);
   path = gtk_tree_model_get_path(liststore.t, &iter);
-  gtk_tree_selection_select_path(selection, path);
+  gtk_tree_selection_select_path(selection.s, path);
   gtk_tree_view_scroll_to_cell(treeview.t, path, NULL, FALSE, 0.0, 0.0);
 
   gtk_tree_path_free(path);
 }
 
-void delete_selected_action(GtkButton *button, gpointer data)
+void delete_selected_action(Button button, gpointer data)
 {
   Treeview treeview;
   Liststore liststore;
-  GtkTreeIter iter;
-  GtkTreeSelection *selection;
+  Treeiter iter;
+  Treeselection selection;
 
   treeview.t = GTK_TREE_VIEW(data);
-  selection = gtk_tree_view_get_selection(treeview.t);
-  if (gtk_tree_selection_get_selected(selection, NULL, &iter)) {
+  selection.s = gtk_tree_view_get_selection(treeview.t);
+  if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
     liststore.t = gtk_tree_view_get_model(treeview.t);
     gtk_list_store_remove(liststore.l, &iter);
   }
 }
 
-void selected_action(GtkTreeSelection *selection, gpointer data)
+void selected_action(Treeselection selection, gpointer data)
 {
   Button delete;
   
   delete.b = GTK_BUTTON(data);
-  gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection, NULL, NULL));
+  gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection.s, NULL, NULL));
 }
 
 void load_actions()
@@ -135,7 +135,7 @@ void write_keyfile(GKeyFile *key_file, const gchar *config_file)
 /* This function first clears the action list
  * then fills it in from the list store
  * then stores the list in the keyfile */
-void save_actions(GtkButton *button, gpointer data)
+void save_actions(Button button, gpointer data)
 {
   gchar *config_dir = g_build_filename(g_get_user_config_dir(), "reminder", NULL);
   gchar *config_file = g_build_filename(g_get_user_config_dir(), "reminder", "actions", NULL);
@@ -143,7 +143,7 @@ void save_actions(GtkButton *button, gpointer data)
   GKeyFile *key_file = g_key_file_new();
   Liststore liststore;
   Treeview treeview;
-  GtkTreeIter iter;
+  Treeiter iter;
   gboolean valid;
 
   treeview.t = GTK_TREE_VIEW(data);
@@ -204,7 +204,7 @@ Treeviewcolumn new_column(const gchar *name, Liststore store, gint c)
   return column;
 }
 
-GtkWidget *create_settings()
+Widget create_settings()
 {
   Vbox vbox; /* This contains all elements */
   Hbox hbox; /* This contains the buttons at the bottom */
@@ -212,7 +212,7 @@ GtkWidget *create_settings()
   Treeview treeview;
   Liststore liststore;
   const GSList *i = actions;
-  GtkTreeIter iter;
+  Treeiter iter;
   Treeselection selection;
 
   /* Create a new liststore and attach it to a treeview */
@@ -247,7 +247,7 @@ GtkWidget *create_settings()
   gtk_container_add(scroll.c, treeview.w);
   gtk_box_pack_start(vbox.b, scroll.w, TRUE, TRUE, 0);
 
-  /* Some buttons too */
+  /* Some buttons too, use the same pointer for all */
   hbox.w = gtk_hbox_new(TRUE, 5);
   Button button;
 
