@@ -252,6 +252,7 @@ Treeviewcolumn new_check_column(const gchar *name, Liststore store, gint c)
 
 void notify_expired(const gchar *s)
 {
+  gtk_widget_show_all(dialog.w);
   printf("do something clever %s\n", s);
 }
 
@@ -275,7 +276,7 @@ gboolean check_actions(Liststore liststore)
                        3, &expired,
                        -1);
     if (!g_time_val_from_iso8601(lastdone_iso, &lastdone) ||
-        !expired && ((now - lastdone.tv_sec)/60 >= interval))
+        !expired && ((now - lastdone.tv_sec)/(60*60) >= interval))
     {
       gtk_list_store_set(liststore.l, &iter, 3, TRUE, -1);
       notify_expired(name);
@@ -370,7 +371,7 @@ gboolean confirm_close(Window dialog, gpointer event, gpointer data)
   confirm.w =
     gtk_message_dialog_new(dialog.d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
                            GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-                           "There may be unsaved changes, close window anyway?");
+                           "This window will not open until an event expired, close?");
   g_signal_connect(confirm.o, "response", G_CALLBACK(handle_reply), dialog.w);
   gtk_widget_show_all(confirm.w);
   return TRUE;
