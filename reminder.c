@@ -234,8 +234,6 @@ void notify_expired(const gchar *s)
   printf("do something clever %s\n", s);
 }
 
-/* Um, I have to rethink this whole linked list thing i guess, I just
- * use the list store everywhere anyway */
 gboolean check_actions(Liststore liststore)
 {
   Treeiter iter;
