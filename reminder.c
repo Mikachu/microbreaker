@@ -26,8 +26,7 @@ void cell_edited(GtkCellRendererText *cell, const gchar *path_string,
 
   gtk_tree_model_get_iter(store.t, &iter, path);
 
-  gtk_list_store_set(store.l, &iter, column, new_text, -1);
-
+  gtk_list_store_set(store.l, &iter, column, column > 0 ? GINT_TO_POINTER(atoi(new_text)) : new_text, -1);
 }
 
 void new_action()
@@ -36,106 +35,6 @@ void new_action()
 
 void delete_selected_action()
 {
-}
-
-Treeviewcolumn new_column(const gchar *name, Liststore store, gint c)
-{
-  Treeviewcolumn column;
-  Cellrenderer renderer;
-
-  renderer.r = gtk_cell_renderer_text_new();
-  g_object_set(renderer.o, "editable", TRUE, NULL);
-  g_object_set_data(renderer.o, "column", GINT_TO_POINTER(c));
-  g_signal_connect(renderer.o, "edited", G_CALLBACK(cell_edited), store.t);
-
-  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", c, NULL);
-  g_object_set(column.o, "resizable", TRUE,
-                         "sizing", GTK_TREE_VIEW_COLUMN_FIXED,
-                         "min-width", 50,
-                         NULL);
-
-  return column;
-}
-
-GtkWidget *create_settings()
-{
-  Vbox vbox; /* This contains all elements */
-  Hbox hbox; /* This contains the buttons at the bottom */
-  Scrolledwindow scroll;
-  Treeview treeview;
-  Liststore liststore;
-  const GSList *i = actions;
-  GtkTreeIter iter;
-
-  /* Create a new liststore and attach it to a treeview */
-  liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
-
-  treeview.w = gtk_tree_view_new_with_model(liststore.t);
-  gtk_tree_view_set_rules_hint(treeview.t, TRUE);
-  gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
-
-  gtk_tree_view_insert_column(treeview.t, new_column("Task", liststore, 0).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_column("Interval", liststore, 1).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_column("Last Done", liststore, 2).c, -1);
-
-  /* Load up our actions into the liststore */
-  while (i) {
-    Action *a = (Action *) (i->data);
-
-    gtk_list_store_append(liststore.l, &iter);
-    gtk_list_store_set(liststore.l, &iter, 0, a->name, 1, a->interval, 2, a->lastdone, -1);
-    i = g_slist_next(i);
-  }
-
-  /* Put everything in a vbox */
-  vbox.w = gtk_vbox_new(FALSE, 5);
-  gtk_container_set_border_width(vbox.c, 5);
-  scroll.w = gtk_scrolled_window_new(NULL, NULL);
-
-  gtk_scrolled_window_set_shadow_type(scroll.s, GTK_SHADOW_IN);
-  gtk_scrolled_window_set_policy(scroll.s,
-                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
-
-  gtk_container_add(scroll.c, treeview.w);
-  gtk_box_pack_start(vbox.b, scroll.w, TRUE, TRUE, 0);
-
-  /* Some buttons too */
-  hbox.w = gtk_hbox_new(TRUE, 5);
-  Button button;
-
-  /* Save button */
-  button.w = gtk_button_new_with_mnemonic("_Save");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(save_actions), NULL);
-  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
-
-  /* New button */
-  button.w = gtk_button_new_with_mnemonic("_New");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(new_action), NULL);
-  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
-
-  /* Delete button */
-  button.w = gtk_button_new_with_mnemonic("_Delete");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(delete_selected_action), NULL);
-  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
-
-  gtk_box_pack_start(vbox.b, hbox.w, FALSE, FALSE, 0);
-
-  return vbox.w;
-}
-
-Window create_dialog()
-{
-  Window dialog;
-
-  dialog.d = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(dialog.w, "Reminder");
-  gtk_window_set_default_size(dialog.w, 400, 600);
-  gtk_window_set_position(dialog.w, GTK_WIN_POS_CENTER);
-  g_signal_connect(dialog.d, "delete-event", G_CALLBACK(exit /* Some function that asks for saving any changes before closing */), 0);
-
-  gtk_container_add(dialog.c, create_settings());
-
-  return dialog;
 }
 
 void load_actions()
@@ -220,6 +119,107 @@ void save_actions()
   g_key_file_free(key_file);
   g_free(config_dir);
   g_free(config_file);
+}
+
+Treeviewcolumn new_column(const gchar *name, Liststore store, gint c)
+{
+  Treeviewcolumn column;
+  Cellrenderer renderer;
+
+  renderer.r = gtk_cell_renderer_text_new();
+  g_object_set(renderer.o, "editable", TRUE, NULL);
+  g_object_set_data(renderer.o, "column", GINT_TO_POINTER(c));
+  g_signal_connect(renderer.o, "edited", G_CALLBACK(cell_edited), store.t);
+
+  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", c, NULL);
+  g_object_set(column.o, "resizable", TRUE,
+                         "sizing", GTK_TREE_VIEW_COLUMN_FIXED,
+                         "min-width", 50,
+                         NULL);
+
+  return column;
+}
+
+GtkWidget *create_settings()
+{
+  Vbox vbox; /* This contains all elements */
+  Hbox hbox; /* This contains the buttons at the bottom */
+  Scrolledwindow scroll;
+  Treeview treeview;
+  Liststore liststore;
+  const GSList *i = actions;
+  GtkTreeIter iter;
+
+  /* Create a new liststore and attach it to a treeview */
+  liststore.l = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
+
+  treeview.w = gtk_tree_view_new_with_model(liststore.t);
+  gtk_tree_view_set_rules_hint(treeview.t, TRUE);
+  gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
+
+  gtk_tree_view_insert_column(treeview.t, new_column("Task", liststore, 0).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Interval", liststore, 1).c, -1);
+  gtk_tree_view_insert_column(treeview.t, new_column("Last Done", liststore, 2).c, -1);
+
+  /* Load up our actions into the liststore */
+  while (i) {
+    Action *a = (Action *) (i->data);
+
+    gtk_list_store_append(liststore.l, &iter);
+    gtk_list_store_set(liststore.l, &iter, 0, a->name, 1, a->interval, 2, a->lastdone, -1);
+    i = g_slist_next(i);
+  }
+
+  /* Put everything in a vbox */
+  vbox.w = gtk_vbox_new(FALSE, 5);
+  gtk_container_set_border_width(vbox.c, 5);
+  scroll.w = gtk_scrolled_window_new(NULL, NULL);
+
+  gtk_scrolled_window_set_shadow_type(scroll.s, GTK_SHADOW_IN);
+  gtk_scrolled_window_set_policy(scroll.s,
+                                 GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
+
+  gtk_container_add(scroll.c, treeview.w);
+  gtk_box_pack_start(vbox.b, scroll.w, TRUE, TRUE, 0);
+
+  /* Some buttons too */
+  hbox.w = gtk_hbox_new(TRUE, 5);
+  Button button;
+
+  /* Save button */
+  button.w = gtk_button_new_with_mnemonic("_Save");
+  g_signal_connect(button.o, "clicked", G_CALLBACK(save_actions), NULL);
+  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  /* New button */
+  button.w = gtk_button_new_with_mnemonic("_New");
+  g_signal_connect(button.o, "clicked", G_CALLBACK(new_action), NULL);
+  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  /* Delete button */
+  button.w = gtk_button_new_with_mnemonic("_Delete");
+  g_signal_connect(button.o, "clicked", G_CALLBACK(delete_selected_action), NULL);
+  gtk_widget_set_sensitive(button.w, FALSE);
+  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(vbox.b, hbox.w, FALSE, FALSE, 0);
+
+  return vbox.w;
+}
+
+Window create_dialog()
+{
+  Window dialog;
+
+  dialog.d = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title(dialog.w, "Reminder");
+  gtk_window_set_default_size(dialog.w, 400, 600);
+  gtk_window_set_position(dialog.w, GTK_WIN_POS_CENTER);
+  g_signal_connect(dialog.d, "delete-event", G_CALLBACK(exit /* Some function that asks for saving any changes before closing */), 0);
+
+  gtk_container_add(dialog.c, create_settings());
+
+  return dialog;
 }
 
 int main(int argc, char *argv[])
