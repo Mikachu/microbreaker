@@ -27,16 +27,14 @@ const gchar *get_iso8601()
   return g_time_val_to_iso8601(&time);
 }
 
+/* Update the last date when marking the task as done */
 void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                   Liststore liststore)
 {
   Treeiter iter;
   Treepath path = gtk_tree_path_new_from_string(path_string);
-  gboolean value;
 
   gtk_tree_model_get_iter(liststore.t, &iter, path);
-  gtk_tree_model_get(liststore.t, &iter, 3, &value, -1);
-  value = FALSE;
   gtk_list_store_set(liststore.l, &iter,
                      2, get_iso8601(),
                      3, FALSE,
