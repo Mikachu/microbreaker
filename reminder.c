@@ -87,7 +87,7 @@ void new_action(Button button, Treeview treeview)
   if (gtk_tree_selection_get_selected(selection.s, NULL, &iter))
     gtk_list_store_insert_before(liststore.l, &iter, &iter);
   else
-    gtk_list_store_insert_before(liststore.l, &iter, NULL);
+    gtk_list_store_append(liststore.l, &iter);
   gtk_list_store_set(liststore.l, &iter,
                      0, "",
                      1, GINT_TO_POINTER(24),
