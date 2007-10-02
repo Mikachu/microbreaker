@@ -22,13 +22,10 @@
 
 static Plug dockchild;
 static Window dockapp;
-static GdkPixmap *alert_pixmap;
-static GdkBitmap *alert_mask;
-static Pixmap     alert_xmask;
-static GdkPixmap *idle_pixmap;
-static GdkBitmap *idle_mask;
-static Pixmap     idle_xmask;
 static Image image;
+static GdkPixmap *alert_pixmap, *idle_pixmap;
+static GdkBitmap *alert_mask, *idle_mask;
+static Pixmap alert_xmask, idle_xmask;
 
 gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwindow dialog);
 
