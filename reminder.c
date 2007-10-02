@@ -247,6 +247,10 @@ Treeviewcolumn new_check_column(const gchar *name, Liststore store, gint c)
   return column;
 }
 
+/* This function is horrible for at least two reasons:
+ * 1) It is triggered every second
+ * 2) It parses the last done string every time instead of using a cached value somewhere
+ */
 gboolean check_actions(Liststore liststore)
 {
   Treeiter iter;
