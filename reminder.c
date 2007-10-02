@@ -306,10 +306,10 @@ Widget create_settings(void)
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
   gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
 
-  gtk_tree_view_insert_column(treeview.t, new_text_column("Task", liststore, 0).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_text_column("Interval", liststore, 1).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_text_column("Last Done", liststore, 2).c, -1);
-  gtk_tree_view_insert_column(treeview.t, new_check_column("Expired", liststore, 3).c, -1);
+  gtk_tree_view_append_column(treeview.t, new_text_column("Task", liststore, 0).c);
+  gtk_tree_view_append_column(treeview.t, new_text_column("Interval", liststore, 1).c);
+  gtk_tree_view_append_column(treeview.t, new_text_column("Last Done", liststore, 2).c);
+  gtk_tree_view_append_column(treeview.t, new_check_column("Expired", liststore, 3).c);
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
