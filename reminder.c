@@ -294,7 +294,6 @@ Widget create_settings()
   Scrolledwindow scroll;
   Treeview treeview;
   Liststore liststore;
-  Treeiter iter;
   Treeselection selection;
 
   /* Create a new liststore and attach it to a treeview */

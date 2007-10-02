@@ -52,7 +52,6 @@ gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwindow dial
 void create_icon(Gtkwindow dialog, int argc, char *argv[])
 {
   XWMHints *wm_hints;
-  Pixmap xmask;
 
   dockapp = XCreateSimpleWindow(GDK_DISPLAY(), GDK_ROOT_WINDOW(), 0, 0, 64, 24, 0, 0, 0);
   wm_hints = XAllocWMHints();
