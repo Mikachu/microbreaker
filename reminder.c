@@ -11,11 +11,13 @@
 /* #ifdef DOCKAPP */
 #include "dockapp.h"
 
-#define COL_NAME       0
-#define COL_INTERVAL   1
-#define COL_DATESTRING 2
-#define COL_DONE       3
-#define COL_DATEVAL    4
+enum {
+  COL_NAME,
+  COL_INTERVAL,
+  COL_DATESTRING,
+  COL_DONE,
+  COL_DATEVAL
+};
 
 static Gtkwindow dialog;
 
