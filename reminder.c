@@ -32,8 +32,7 @@ static void selected_action(Treeselection selection, Button delete);
 static void load_actions(Liststore liststore);
 static void write_keyfile(GKeyFile *key_file, const gchar *config_file);
 static void save_actions(Button button, Treeview treeview);
-static Treeviewcolumn new_text_column(const gchar *name, Liststore store, gint c);
-static Treeviewcolumn new_check_column(const gchar *name, Liststore store, gint c);
+static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gboolean check);
 static gboolean check_actions(Liststore liststore);
 static Widget create_settings(void);
 static Gtkwindow create_dialog(void);
@@ -244,38 +243,22 @@ static void save_actions(Button button, Treeview treeview)
   g_free(config_file);
 }
 
-static Treeviewcolumn new_text_column(const gchar *name, Liststore store, gint c)
+static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gboolean check)
 {
   Treeviewcolumn column;
   Cellrenderer renderer;
 
-  renderer.r = gtk_cell_renderer_text_new();
-  g_object_set(renderer.o, "editable", TRUE, NULL);
+  renderer.r = check ? gtk_cell_renderer_toggle_new() : gtk_cell_renderer_text_new();
+  g_object_set(renderer.o, check ? "activatable" : "editable", TRUE, NULL);
   g_object_set_data(renderer.o, "column", GINT_TO_POINTER(c));
-  g_signal_connect(renderer.o, "edited", G_CALLBACK(cell_edited), store.t);
+  g_signal_connect(renderer.o, check ? "toggled" : "edited",
+                   check ? G_CALLBACK(cell_toggled) : G_CALLBACK(cell_edited), store.t);
 
-  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "text", c, NULL);
+  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r,
+                                                      check ? "active" : "text", c, NULL);
   g_object_set(column.o, "resizable", TRUE,
                          "sizing", GTK_TREE_VIEW_COLUMN_AUTOSIZE,
-                         "expand", TRUE,
-                         NULL);
-
-  return column;
-}
-
-static Treeviewcolumn new_check_column(const gchar *name, Liststore store, gint c)
-{
-  Treeviewcolumn column;
-  Cellrenderer renderer;
-
-  renderer.r = gtk_cell_renderer_toggle_new();
-  g_object_set(renderer.o, "activatable", TRUE, NULL);
-  g_object_set_data(renderer.o, "column", GINT_TO_POINTER(c));
-  g_signal_connect(renderer.o, "toggled", G_CALLBACK(cell_toggled), store.t);
-
-  column.c = gtk_tree_view_column_new_with_attributes(name, renderer.r, "active", c, NULL);
-  g_object_set(column.o, "resizable", FALSE,
-                         "sizing", GTK_TREE_VIEW_COLUMN_AUTOSIZE,
+                         check ? NULL : "expand", TRUE,
                          NULL);
 
   return column;
@@ -335,10 +318,10 @@ static Widget create_settings(void)
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
   gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
 
-  gtk_tree_view_append_column(treeview.t, new_text_column("Task", liststore, COL_NAME).c);
-  gtk_tree_view_append_column(treeview.t, new_text_column("Interval", liststore, COL_INTERVAL).c);
-  gtk_tree_view_append_column(treeview.t, new_text_column("Last Done", liststore, COL_DATESTRING).c);
-  gtk_tree_view_append_column(treeview.t, new_check_column("Expired", liststore, COL_DONE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Task", liststore, COL_NAME, FALSE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Interval", liststore, COL_INTERVAL, FALSE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Last Done", liststore, COL_DATESTRING, FALSE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Expired", liststore, COL_DONE, TRUE).c);
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
