@@ -11,6 +11,8 @@
 /* #ifdef DOCKAPP */
 #include "dockapp.h"
 
+#define PADDING 5
+
 enum {
   COL_NAME,
   COL_INTERVAL,
@@ -329,8 +331,8 @@ static Widget create_settings(void)
   g_timeout_add_seconds(1, (GSourceFunc)check_actions, liststore.t);
 
   /* Put everything in a vbox */
-  vbox.w = gtk_vbox_new(FALSE, 5);
-  gtk_container_set_border_width(vbox.c, 5);
+  vbox.w = gtk_vbox_new(FALSE, PADDING);
+  gtk_container_set_border_width(vbox.c, PADDING);
   scroll.w = gtk_scrolled_window_new(NULL, NULL);
 
   gtk_scrolled_window_set_shadow_type(scroll.s, GTK_SHADOW_IN);
@@ -341,7 +343,7 @@ static Widget create_settings(void)
   gtk_box_pack_start(vbox.b, scroll.w, TRUE, TRUE, 0);
 
   /* Some buttons too, use the same pointer for all */
-  hbox.w = gtk_hbox_new(TRUE, 5);
+  hbox.w = gtk_hbox_new(TRUE, PADDING);
 
   /* New button */
   button.w = gtk_button_new_with_mnemonic("_New");
