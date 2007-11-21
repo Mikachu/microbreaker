@@ -23,7 +23,6 @@ enum {
 
 static Gtkwindow dialog;
 
-static glong get_epochseconds(void);
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore);
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
@@ -39,13 +38,6 @@ static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gbo
 static gboolean check_actions(Liststore liststore);
 static Widget create_settings(void);
 static Gtkwindow create_dialog(void);
-
-static glong get_epochseconds(void)
-{
-  GTimeVal time;
-  g_get_current_time(&time);
-  return time.tv_sec;
-}
 
 static const gchar *tv_sec_to_iso8601(gint tv_sec)
 {
@@ -283,7 +275,14 @@ static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gbo
   return column;
 }
 
-/* This function should not be run every second.
+static glong get_epochseconds(void)
+{
+  GTimeVal time;
+  g_get_current_time(&time);
+  return time.tv_sec;
+}
+
+/* This function should not be run every minute.
  * It should be possible to set up some g_timeout_add() for each action. */
 static gboolean check_actions(Liststore liststore)
 {
@@ -345,7 +344,7 @@ static Widget create_settings(void)
   /* Load up our actions into the liststore */
   load_actions(liststore);
 
-  g_timeout_add_seconds(1, (GSourceFunc)check_actions, liststore.t);
+  g_timeout_add_seconds(60, (GSourceFunc)check_actions, liststore.t);
 
   /* Put everything in a vbox */
   vbox.w = gtk_vbox_new(FALSE, PADDING);
