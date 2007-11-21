@@ -17,7 +17,7 @@ enum {
   COL_NAME,
   COL_INTERVAL,
   COL_DATESTRING,
-  COL_DONE,
+  COL_EXPIRED,
   COL_DATEVAL
 };
 
@@ -66,7 +66,7 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
   gtk_tree_model_get_iter(liststore.t, &iter, path);
   gtk_list_store_set(liststore.l, &iter,
                      COL_DATESTRING, g_time_val_to_iso8601(&time),
-                     COL_DONE,       FALSE,
+                     COL_EXPIRED,    FALSE,
                      COL_DATEVAL,    time.tv_sec,
                      -1);
 
@@ -126,7 +126,7 @@ static void new_action(Button button, Treeview treeview)
                      COL_NAME,       "",
                      COL_INTERVAL,   GINT_TO_POINTER(24),
                      COL_DATESTRING, g_time_val_to_iso8601(&time),
-                     COL_DONE,       FALSE,
+                     COL_EXPIRED,    FALSE,
                      COL_DATEVAL,    time.tv_sec,
                      -1);
   path = gtk_tree_model_get_path(liststore.t, &iter);
@@ -179,7 +179,7 @@ static void load_actions(Liststore liststore)
                        COL_NAME,       name,
                        COL_INTERVAL,   interval,
                        COL_DATESTRING, tv_sec_to_iso8601(lastdone),
-                       COL_DONE,       FALSE,
+                       COL_EXPIRED,    FALSE,
                        COL_DATEVAL,    lastdone,
                        -1);
   }
@@ -228,7 +228,7 @@ static void save_actions(Button button, Treeview treeview)
     gtk_tree_model_get(liststore.t, &iter,
                        COL_NAME,     &name,
                        COL_INTERVAL, &interval,
-                       COL_DONE,     &expired,
+                       COL_EXPIRED,  &expired,
                        COL_DATEVAL,  &lastdone,
                        -1);
     if (*name) {
@@ -282,14 +282,14 @@ static gboolean check_actions(Liststore liststore)
     
     gtk_tree_model_get(liststore.t, &iter,
                        COL_INTERVAL, &interval,
-                       COL_DONE,     &expired,
+                       COL_EXPIRED,  &expired,
                        COL_DATEVAL,  &lastdone,
                        -1);
     if (expired)
       all_handled = FALSE;
     else if ((now - lastdone)/(60*60) >= interval)
     {
-      gtk_list_store_set(liststore.l, &iter, COL_DONE, TRUE, -1);
+      gtk_list_store_set(liststore.l, &iter, COL_EXPIRED, TRUE, -1);
       set_icon_alert(TRUE);
       all_handled = FALSE;
     }
@@ -323,7 +323,7 @@ static Widget create_settings(void)
   gtk_tree_view_append_column(treeview.t, new_column("Task", liststore, COL_NAME, FALSE).c);
   gtk_tree_view_append_column(treeview.t, new_column("Interval", liststore, COL_INTERVAL, FALSE).c);
   gtk_tree_view_append_column(treeview.t, new_column("Last Done", liststore, COL_DATESTRING, FALSE).c);
-  gtk_tree_view_append_column(treeview.t, new_column("Expired", liststore, COL_DONE, TRUE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Expired", liststore, COL_EXPIRED, TRUE).c);
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
