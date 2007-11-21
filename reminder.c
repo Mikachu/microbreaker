@@ -40,6 +40,9 @@ static Widget create_settings(void);
 static Gtkwindow create_dialog(void);
 
 /* Update the last date when marking the task as done */
+/* XXX: Some ideas to make this better,
+ *    * Don't update the date if the user already edited it to be after the timeout
+ */
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore)
 {
