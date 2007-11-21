@@ -59,31 +59,27 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                   Liststore liststore)
 {
   Treeiter iter;
-  Treepath path = gtk_tree_path_new_from_string(path_string);
   GTimeVal time;
 
   g_get_current_time(&time);
-  gtk_tree_model_get_iter(liststore.t, &iter, path);
+  gtk_tree_model_get_iter_from_string(liststore.t, &iter, path_string);
   gtk_list_store_set(liststore.l, &iter,
                      COL_DATESTRING, g_time_val_to_iso8601(&time),
                      COL_EXPIRED,    FALSE,
                      COL_DATEVAL,    time.tv_sec,
                      -1);
-
-  gtk_tree_path_free(path);
 }
 
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
                  gchar *new_text, Liststore liststore)
 {
   Treeiter iter;
-  Treepath path = gtk_tree_path_new_from_string(path_string);
   gint column;
   GTimeVal time;
 
   column = GPOINTER_TO_INT(g_object_get_data(renderer.o, "column"));
 
-  gtk_tree_model_get_iter(liststore.t, &iter, path);
+  gtk_tree_model_get_iter_from_string(liststore.t, &iter, path_string);
 
   switch (column) {
     case COL_DATESTRING:
