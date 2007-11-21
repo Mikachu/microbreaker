@@ -57,7 +57,7 @@ static const gchar *tv_sec_to_iso8601(gint tv_sec)
 
 /* Update the last date when marking the task as done */
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
-                  Liststore liststore)
+                         Liststore liststore)
 {
   Treeiter iter;
   GTimeVal time;
@@ -72,7 +72,7 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
 }
 
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
-                 gchar *new_text, Liststore liststore)
+                        gchar *new_text, Liststore liststore)
 {
   Treeiter iter;
   gint column;
@@ -93,13 +93,19 @@ static void cell_edited(Cellrenderer renderer, const gchar *path_string,
         gtk_widget_show_all(message.w);
         break;
       }
-      gtk_list_store_set(liststore.l, &iter, COL_DATEVAL, time.tv_sec, -1);
+      gtk_list_store_set(liststore.l, &iter,
+                         COL_DATEVAL, time.tv_sec,
+                         -1);
       /* fall through */
     case COL_NAME:
-      gtk_list_store_set(liststore.l, &iter, column, new_text, -1);
+      gtk_list_store_set(liststore.l, &iter,
+                         column, new_text,
+                         -1);
       break;
     case COL_INTERVAL:
-      gtk_list_store_set(liststore.l, &iter, column, GINT_TO_POINTER(atoi(new_text)), -1);
+      gtk_list_store_set(liststore.l, &iter,
+                         column, GINT_TO_POINTER(atoi(new_text)),
+                         -1);
       break;
   }
 }
@@ -315,15 +321,15 @@ static Widget create_settings(void)
 {
   Vbox vbox; /* This contains the liststore and the hbox */
   Hbox hbox; /* This contains the buttons at the bottom */
-  Scrolledwindow scroll; /* Need to put the treeview in one of these to get scrollbars */
+  Scrolledwindow scroll; /* Need to put the treeview in this for scrollbars */
   Treeview treeview;
   Liststore liststore;
   Treeselection selection;
   Button button;
 
-  /* Create a new liststore and attach it to a treeview, the fifth column is used
-   * for caching the last done date as an integer so we don't have to parse the
-   * iso8601 representation so often. */
+  /* Create a new liststore and attach it to a treeview, the fifth column is
+   * used for caching the last done date as an integer so we don't have to parse
+   * the iso8601 representation so often. */
   liststore.l = gtk_list_store_new(5, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING,
                                       G_TYPE_BOOLEAN, G_TYPE_INT);
 
@@ -331,10 +337,10 @@ static Widget create_settings(void)
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
   gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
 
-  gtk_tree_view_append_column(treeview.t, new_column("Task", liststore, COL_NAME, FALSE).c);
-  gtk_tree_view_append_column(treeview.t, new_column("Interval", liststore, COL_INTERVAL, FALSE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Task",      liststore, COL_NAME,       FALSE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Interval",  liststore, COL_INTERVAL,   FALSE).c);
   gtk_tree_view_append_column(treeview.t, new_column("Last Done", liststore, COL_DATESTRING, FALSE).c);
-  gtk_tree_view_append_column(treeview.t, new_column("Expired", liststore, COL_EXPIRED, TRUE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Expired",   liststore, COL_EXPIRED,     TRUE).c);
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
