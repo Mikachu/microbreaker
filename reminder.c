@@ -39,14 +39,6 @@ static gboolean check_actions(Liststore liststore);
 static Widget create_settings(void);
 static Gtkwindow create_dialog(void);
 
-static const gchar *tv_sec_to_iso8601(gint tv_sec)
-{
-  GTimeVal time;
-  time.tv_sec = tv_sec;
-  time.tv_usec = 0;
-  return g_time_val_to_iso8601(&time);
-}
-
 /* Update the last date when marking the task as done */
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore)
@@ -161,6 +153,14 @@ static void confirm_delete_action(Button button, Treeview treeview)
 static void selected_action(Treeselection selection, Button delete)
 {
   gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection.s, NULL, NULL));
+}
+
+static const gchar *tv_sec_to_iso8601(gint tv_sec)
+{
+  GTimeVal time;
+  time.tv_sec = tv_sec;
+  time.tv_usec = 0;
+  return g_time_val_to_iso8601(&time);
 }
 
 static void load_actions(Liststore liststore)
