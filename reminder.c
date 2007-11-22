@@ -120,6 +120,7 @@ static void cell_edited(Cellrenderer renderer, const gchar *path_string,
       gtk_list_store_set(liststore.l, &iter,
                          COL_DATEVAL, time.tv_sec,
                          -1);
+      check_actions(liststore);
       /* fall through */
     case COL_NAME:
       gtk_list_store_set(liststore.l, &iter,
@@ -131,6 +132,7 @@ static void cell_edited(Cellrenderer renderer, const gchar *path_string,
       gtk_list_store_set(liststore.l, &iter,
                          column, GINT_TO_POINTER(atoi(new_text)),
                          -1);
+      check_actions(liststore);
       set_sensitivity(liststore.o, TRUE);
       break;
   }
@@ -161,6 +163,7 @@ static void new_action(Button button, Treeview treeview)
   path = gtk_tree_model_get_path(liststore.t, &iter);
   gtk_tree_selection_select_path(selection.s, path);
   gtk_tree_view_scroll_to_cell(treeview.t, path, NULL, FALSE, 0.0, 0.0);
+  check_actions(liststore);
   set_sensitivity(liststore.o, TRUE);
 
   gtk_tree_path_free(path);
@@ -175,6 +178,7 @@ static void delete_response(Gtkwindow window, gint answer, Treeview treeview)
     if (gtk_tree_view_get_selected(treeview, &iter)) {
       liststore.t = gtk_tree_view_get_model(treeview.t);
       gtk_list_store_remove(liststore.l, &iter);
+      check_actions(liststore);
       set_sensitivity(liststore.o, TRUE);
     }
   }
@@ -320,7 +324,8 @@ static void confirm_quit(Button button, GObject *object)
 {
   if (g_object_get_data(object, "unsaved")) {
     Gtkwindow confirm;
-    confirm.w = gtk_message_dialog_new(get_dialog(object).d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+    confirm.w = gtk_message_dialog_new(get_dialog(object).d,
+                                       GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
                                        GTK_MESSAGE_WARNING, GTK_BUTTONS_YES_NO,
                                        "There are unsaved changes, quit anyway?");
     g_signal_connect(confirm.o, "response", G_CALLBACK(quit_response), NULL);
@@ -344,6 +349,7 @@ static gboolean check_actions(Liststore liststore)
   gboolean valid;
   gboolean all_handled = TRUE;
   glong now = get_epochseconds();
+  gint timepassed, nearesttimeout = 0;
 
   valid = gtk_tree_model_get_iter_first(liststore.t, &iter);
   while (valid) {
@@ -355,19 +361,23 @@ static gboolean check_actions(Liststore liststore)
                        COL_EXPIRED,  &expired,
                        COL_DATEVAL,  &lastdone,
                        -1);
+    timepassed = now - lastdone;
+    interval*=3600;
     if (expired)
       all_handled = FALSE;
-    else if ((now - lastdone)/(60*60) >= interval)
-    {
+    else if (timepassed >= interval) {
       gtk_list_store_set(liststore.l, &iter, COL_EXPIRED, TRUE, -1);
       set_icon_alert(TRUE);
       all_handled = FALSE;
-    }
+    } else if (all_handled && (!nearesttimeout || interval - timepassed < nearesttimeout))
+      nearesttimeout = interval - timepassed;
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
-  if (all_handled)
+  if (all_handled) {
+    g_timeout_add_seconds(nearesttimeout, (GSourceFunc)check_actions, liststore.t);
     set_icon_alert(FALSE);
-  return TRUE;
+  }
+  return FALSE;
 }
 
 static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gboolean check)
@@ -501,7 +511,6 @@ int main(int argc, char *argv[])
 
   liststore.o = g_object_get_data(dialog.o, "liststore");
   check_actions(liststore);
-  g_timeout_add_seconds(60, (GSourceFunc)check_actions, liststore.t);
 
   gtk_main();
 
