@@ -83,6 +83,7 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                        COL_EXPIRED,    FALSE,
                        -1);
   set_sensitivity(liststore.o, TRUE);
+  check_actions(liststore);
 }
 
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
@@ -401,6 +402,7 @@ static Widget create_settings(Gtkwindow dialog)
   liststore.l = gtk_list_store_new(5, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING,
                                       G_TYPE_BOOLEAN, G_TYPE_INT);
   g_object_set_data(liststore.o, "dialog", dialog.o);
+  g_object_set_data(dialog.o, "liststore", liststore.o);
 
   treeview.w = gtk_tree_view_new_with_model(liststore.t);
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
@@ -413,8 +415,6 @@ static Widget create_settings(Gtkwindow dialog)
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
-
-  g_timeout_add_seconds(60, (GSourceFunc)check_actions, liststore.t);
 
   /* Put everything in a vbox */
   vbox.w = gtk_vbox_new(FALSE, PADDING);
@@ -486,12 +486,17 @@ static Gtkwindow create_dialog(void)
 int main(int argc, char *argv[])
 {
   Gtkwindow dialog;
+  Liststore liststore;
 
   gtk_init(&argc, &argv);
 
   dialog = create_dialog();
 
   create_icon(dialog, argc, argv);
+
+  liststore.o = g_object_get_data(dialog.o, "liststore");
+  check_actions(liststore);
+  g_timeout_add_seconds(60, (GSourceFunc)check_actions, liststore.t);
 
   gtk_main();
 
