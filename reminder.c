@@ -23,13 +23,14 @@ enum {
   COL_DATEVAL
 };
 
+static gboolean gtk_tree_view_get_selected(Treeview treeview, Treeiter *iter);
 static void set_sensitivity(GObject *object, gboolean sensitive);
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore);
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
                         gchar *new_text, Liststore liststore);
 static void new_action(Button button, Treeview treeview);
-static void delete_selected_action(Gtkwindow window, gint answer, Treeview treeview);
+static void delete_response(Gtkwindow window, gint answer, Treeview treeview);
 static void confirm_delete_action(Button button, Treeview treeview);
 static void selected_action(Treeselection selection, Button delete);
 static void load_actions(Liststore liststore);
@@ -39,6 +40,14 @@ static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gbo
 static gboolean check_actions(Liststore liststore);
 static Widget create_settings(Gtkwindow dialog);
 static Gtkwindow create_dialog(void);
+
+static gboolean gtk_tree_view_get_selected(Treeview treeview, Treeiter *iter)
+{
+  Treeselection selection;
+
+  selection.s = gtk_tree_view_get_selection(treeview.t);
+  return gtk_tree_selection_get_selected(selection.s, NULL, iter);
+}
 
 static void set_sensitivity(GObject *object, gboolean sensitive)
 {
@@ -157,15 +166,13 @@ static void new_action(Button button, Treeview treeview)
   gtk_tree_path_free(path);
 }
 
-static void delete_selected_action(Gtkwindow window, gint answer, Treeview treeview)
+static void delete_response(Gtkwindow window, gint answer, Treeview treeview)
 {
   if (answer == GTK_RESPONSE_YES) {
     Liststore liststore;
     Treeiter iter;
-    Treeselection selection;
 
-    selection.s = gtk_tree_view_get_selection(treeview.t);
-    if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
+    if (gtk_tree_view_get_selected(treeview, &iter)) {
       liststore.t = gtk_tree_view_get_model(treeview.t);
       gtk_list_store_remove(liststore.l, &iter);
       set_sensitivity(liststore.o, TRUE);
@@ -177,11 +184,9 @@ static void delete_selected_action(Gtkwindow window, gint answer, Treeview treev
 
 static void confirm_delete_action(Button button, Treeview treeview)
 {
-  Treeselection selection;
   Treeiter iter;
 
-  selection.s = gtk_tree_view_get_selection(treeview.t);
-  if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
+  if (gtk_tree_view_get_selected(treeview, &iter)) {
     Gtkwindow confirm;
     Liststore liststore;
     const gchar *name;
@@ -194,7 +199,7 @@ static void confirm_delete_action(Button button, Treeview treeview)
     message = g_strdup_printf("Are you sure you want to delete the action '%s'?", name);
     confirm.w = gtk_message_dialog_new(get_dialog(liststore.o).d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
                                        GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, message);
-    g_signal_connect(confirm.o, "response", G_CALLBACK(delete_selected_action), treeview.w);
+    g_signal_connect(confirm.o, "response", G_CALLBACK(delete_response), treeview.w);
     gtk_widget_show_all(confirm.w);
   }
 }
@@ -304,7 +309,7 @@ static void save_actions(Button button, Treeview treeview)
   g_free(config_file);
 }
 
-static void confirmed_quit(Gtkwindow window, gint answer, void *unused)
+static void quit_response(Gtkwindow window, gint answer, void *unused)
 {
   if (answer == GTK_RESPONSE_YES)
     gtk_main_quit();
@@ -318,7 +323,7 @@ static void confirm_quit(Button button, GObject *object)
     confirm.w = gtk_message_dialog_new(get_dialog(object).d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
                                        GTK_MESSAGE_WARNING, GTK_BUTTONS_YES_NO,
                                        "There are unsaved changes, quit anyway?");
-    g_signal_connect(confirm.o, "response", G_CALLBACK(confirmed_quit), NULL);
+    g_signal_connect(confirm.o, "response", G_CALLBACK(quit_response), NULL);
     gtk_widget_show_all(confirm.w);
   } else
     gtk_main_quit();
