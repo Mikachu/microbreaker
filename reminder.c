@@ -55,23 +55,33 @@ static Gtkwindow get_dialog(GObject *object)
   return dialog;
 }
 
-/* Update the last date when marking the task as done */
-/* XXX: Some ideas to make this better,
- *    * Don't update the date if the user already edited it to be after the timeout
- */
+/* Automatically updates the last done time to the current time, unless
+ * the user has already updated the date and the task is currently expired. */
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore)
 {
   Treeiter iter;
   GTimeVal time;
+  gint interval, lastdone;
+  gboolean expired;
 
   g_get_current_time(&time);
   gtk_tree_model_get_iter_from_string(liststore.t, &iter, path_string);
-  gtk_list_store_set(liststore.l, &iter,
-                     COL_DATESTRING, g_time_val_to_iso8601(&time),
-                     COL_EXPIRED,    FALSE,
-                     COL_DATEVAL,    time.tv_sec,
+  gtk_tree_model_get(liststore.t, &iter,
+                     COL_INTERVAL, &interval,
+                     COL_DATEVAL,  &lastdone,
+                     COL_EXPIRED,  &expired,
                      -1);
+  if (!expired || (time.tv_sec - lastdone)/(60*60) >= interval)
+    gtk_list_store_set(liststore.l, &iter,
+                       COL_DATESTRING, g_time_val_to_iso8601(&time),
+                       COL_DATEVAL,    time.tv_sec,
+                       COL_EXPIRED,    FALSE,
+                       -1);
+  else
+    gtk_list_store_set(liststore.l, &iter,
+                       COL_EXPIRED,    FALSE,
+                       -1);
   set_sensitivity(liststore.o, TRUE);
 }
 
