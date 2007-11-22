@@ -1,5 +1,5 @@
 /* XPM */
-static char * Icon_xpm[] = {
+static char * icon_xpm[] = {
 "64 64 73 1",
 " 	c None",
 ".	c #F8FF2C",

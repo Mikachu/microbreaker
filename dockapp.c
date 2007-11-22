@@ -10,10 +10,8 @@
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/shape.h>
-#include "pixmaps/Alert.xpm"
-#include "pixmaps/Alert.xbm"
-#include "pixmaps/Idle.xpm"
-#include "pixmaps/Idle.xbm"
+#include "pixmaps/alert.xpm"
+#include "pixmaps/idle.xpm"
 
 /* nicer gtk interface */
 #include "gtkunion.h"
@@ -21,26 +19,20 @@
 #include "dockapp.h"
 
 static Plug dockchild;
-static Window dockapp;
+static GdkWindow *gdkdockapp;
 static Image image;
 static GdkPixmap *alert_pixmap, *idle_pixmap;
-static GdkBitmap *alert_mask, *idle_mask;
-static Pixmap alert_xmask, idle_xmask;
+static GdkBitmap *alert_bitmap, *idle_bitmap;
 
-static gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwindow dialog);
+static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, Gtkwindow dialog);
 
 void set_icon_alert(gboolean alert)
 {
-  if (alert) {
-    gtk_image_set_from_pixmap(image.i, alert_pixmap, alert_mask);
-    XShapeCombineMask(GDK_DISPLAY(), dockapp, ShapeBounding, 0, 0, alert_xmask, ShapeSet);
-  } else {
-    gtk_image_set_from_pixmap(image.i, idle_pixmap, idle_mask);
-    XShapeCombineMask(GDK_DISPLAY(), dockapp, ShapeBounding, 0, 0, idle_xmask, ShapeSet);
-  }
+  gtk_image_set_from_pixmap(image.i, alert ? alert_pixmap : idle_pixmap, NULL);
+  gdk_window_shape_combine_mask(gdkdockapp, alert ? alert_bitmap : idle_bitmap, 0, 0);
 }
 
-static gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwindow dialog)
+static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, Gtkwindow dialog)
 {
   if (event->button == 1) {
     gtk_widget_show_all(dialog.w);
@@ -52,6 +44,7 @@ static gboolean handle_dock_event(Window dockapp, GdkEventButton *event, Gtkwind
 /* I'm sorry if this code offends anyone :) */
 void create_icon(Gtkwindow dialog, int argc, char *argv[])
 {
+  Window dockapp;
   XWMHints *wm_hints;
 
   dockapp = XCreateSimpleWindow(GDK_DISPLAY(), GDK_ROOT_WINDOW(), 0, 0, 64, 24, 0, 0, 0);
@@ -64,6 +57,8 @@ void create_icon(Gtkwindow dialog, int argc, char *argv[])
   XFree(wm_hints);
   XSetCommand(GDK_DISPLAY(), dockapp, argv, argc);
 
+  gdkdockapp = gdk_window_foreign_new(dockapp);
+
   dockchild.w = gtk_plug_new(0);
   gtk_widget_add_events(dockchild.w, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
   g_signal_connect(dockchild.w, "button-release-event", G_CALLBACK(handle_dock_event), dialog.o);
@@ -71,17 +66,8 @@ void create_icon(Gtkwindow dialog, int argc, char *argv[])
 
   gtk_widget_realize(dockchild.w);
 
-  alert_mask = gdk_bitmap_create_from_data(dockchild.w->window,
-                                          Alert_bits, Alert_width, Alert_height);
-  alert_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, NULL, NULL, Alert_xpm);
-  alert_xmask = XCreateBitmapFromData(GDK_DISPLAY(), GDK_ROOT_WINDOW(),
-                                Alert_bits, Alert_width, Alert_height);
-
-  idle_mask = gdk_bitmap_create_from_data(dockchild.w->window,
-                                          Idle_bits, Idle_width, Idle_height);
-  idle_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, NULL, NULL, Idle_xpm);
-  idle_xmask = XCreateBitmapFromData(GDK_DISPLAY(), GDK_ROOT_WINDOW(),
-                                Idle_bits, Idle_width, Idle_height);
+  alert_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &alert_bitmap, NULL, alert_xpm);
+  idle_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &idle_bitmap, NULL, idle_xpm);
 
   image.w = gtk_image_new();
   set_icon_alert(FALSE);
@@ -89,8 +75,9 @@ void create_icon(Gtkwindow dialog, int argc, char *argv[])
 
   gtk_widget_show_all(dockchild.w);
 
-  XReparentWindow(GDK_DISPLAY(), GDK_WINDOW_XID(dockchild.w->window), dockapp, 0, 0);
-  XMapWindow(GDK_DISPLAY(), GDK_WINDOW_XID(dockchild.w->window));
+  gdk_window_reparent(dockchild.w->window, gdkdockapp, 0, 0);
+  gdk_window_show_unraised(dockchild.w->window);
+  /* can't use gdk for this final map, or it will clear my carefully set dockapp hints */
   XMapWindow(GDK_DISPLAY(), dockapp);
 }
 

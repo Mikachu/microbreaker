@@ -11,7 +11,7 @@
 /* #ifdef DOCKAPP */
 #include "dockapp.h"
 
-#include "pixmaps/Icon.xpm"
+#include "pixmaps/icon.xpm"
 
 #define PADDING 5
 
@@ -474,14 +474,12 @@ static Gtkwindow create_dialog(void)
 int main(int argc, char *argv[])
 {
   Gtkwindow dialog;
-  GdkPixbuf *icon_pixbuf;
 
   gtk_init(&argc, &argv);
 
   dialog = create_dialog();
 
-  icon_pixbuf = gdk_pixbuf_new_from_xpm_data((const char **)&Icon_xpm);
-  gtk_window_set_icon(dialog.d, icon_pixbuf);
+  gtk_window_set_icon(dialog.d, gdk_pixbuf_new_from_xpm_data((const char **)&icon_xpm));
 
   create_icon(dialog, argc, argv);
 
