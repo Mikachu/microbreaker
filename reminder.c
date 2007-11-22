@@ -349,6 +349,26 @@ static gboolean check_actions(Liststore liststore)
   return TRUE;
 }
 
+static void confirmed_quit(Gtkwindow window, gint answer, void *unused)
+{
+  if (answer == GTK_RESPONSE_YES)
+    gtk_main_quit();
+  gtk_widget_destroy(window.w);
+}
+
+static void confirm_quit(Button button, void *unused)
+{
+  if (unsaved) {
+    Gtkwindow confirm;
+    confirm.w = gtk_message_dialog_new(dialog.d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+                                       GTK_MESSAGE_WARNING, GTK_BUTTONS_YES_NO,
+                                       "There are unsaved changes, quit anyway?");
+    g_signal_connect(confirm.o, "response", G_CALLBACK(confirmed_quit), NULL);
+    gtk_widget_show_all(confirm.w);
+  } else
+    gtk_main_quit();
+}
+
 static Widget create_settings(void)
 {
   Vbox vbox; /* This contains the liststore and the hbox */
@@ -422,7 +442,7 @@ static Widget create_settings(void)
 
   /* Quit button */
   button.w = gtk_button_new_with_mnemonic("_Quit");
-  g_signal_connect(button.o, "clicked", G_CALLBACK(gtk_main_quit), NULL);
+  g_signal_connect(button.o, "clicked", G_CALLBACK(confirm_quit), NULL);
   gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
 
   gtk_box_pack_start(vbox.b, hbox.w, FALSE, FALSE, 0);
