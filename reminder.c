@@ -160,12 +160,26 @@ static void delete_selected_action(Gtkwindow window, gint answer, Treeview treev
 
 static void confirm_delete_action(Button button, Treeview treeview)
 {
-  Gtkwindow confirm;
-  confirm.w = gtk_message_dialog_new(dialog.d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
-                                     GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
-                                     "Are you sure you want to delete this action?");
-  g_signal_connect(confirm.o, "response", G_CALLBACK(delete_selected_action), treeview.w);
-  gtk_widget_show_all(confirm.w);
+  Treeselection selection;
+  Treeiter iter;
+
+  selection.s = gtk_tree_view_get_selection(treeview.t);
+  if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
+    Gtkwindow confirm;
+    Liststore liststore;
+    const gchar *name;
+    gchar *message;
+
+    liststore.t = gtk_tree_view_get_model(treeview.t);
+    gtk_tree_model_get(liststore.t, &iter,
+                       COL_NAME, &name,
+                       -1);
+    message = g_strdup_printf("Are you sure you want to delete the action '%s'?", name);
+    confirm.w = gtk_message_dialog_new(dialog.d, GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+                                       GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, message);
+    g_signal_connect(confirm.o, "response", G_CALLBACK(delete_selected_action), treeview.w);
+    gtk_widget_show_all(confirm.w);
+  }
 }
 
 static void selected_action(Treeselection selection, Button delete)
