@@ -16,11 +16,13 @@ typedef union {
 typedef union {
   GtkListStore *l;
   GtkTreeModel *t;
+  GObject *o;
 } Liststore;
 
 typedef union {
   GtkTreeView *t;
   GtkWidget *w;
+  GObject *o;
 } Treeview;
 
 typedef union {

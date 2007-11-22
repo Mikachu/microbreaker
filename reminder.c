@@ -22,7 +22,9 @@ enum {
 };
 
 static Gtkwindow dialog;
+static gboolean unsaved;
 
+static void set_sensitivity(GObject *object, gboolean sensitive);
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore);
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
@@ -38,6 +40,14 @@ static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gbo
 static gboolean check_actions(Liststore liststore);
 static Widget create_settings(void);
 static Gtkwindow create_dialog(void);
+
+static void set_sensitivity(GObject *object, gboolean sensitive)
+{
+  Button button;
+  button.o = g_object_get_data(object, "savebutton");
+  gtk_widget_set_sensitive(button.w, sensitive);
+  unsaved = sensitive;
+}
 
 /* Update the last date when marking the task as done */
 /* XXX: Some ideas to make this better,
@@ -56,6 +66,7 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                      COL_EXPIRED,    FALSE,
                      COL_DATEVAL,    time.tv_sec,
                      -1);
+  set_sensitivity(liststore.o, TRUE);
 }
 
 static void cell_edited(Cellrenderer renderer, const gchar *path_string,
@@ -88,11 +99,13 @@ static void cell_edited(Cellrenderer renderer, const gchar *path_string,
       gtk_list_store_set(liststore.l, &iter,
                          column, new_text,
                          -1);
+      set_sensitivity(liststore.o, TRUE);
       break;
     case COL_INTERVAL:
       gtk_list_store_set(liststore.l, &iter,
                          column, GINT_TO_POINTER(atoi(new_text)),
                          -1);
+      set_sensitivity(liststore.o, TRUE);
       break;
   }
 }
@@ -122,6 +135,7 @@ static void new_action(Button button, Treeview treeview)
   path = gtk_tree_model_get_path(liststore.t, &iter);
   gtk_tree_selection_select_path(selection.s, path);
   gtk_tree_view_scroll_to_cell(treeview.t, path, NULL, FALSE, 0.0, 0.0);
+  set_sensitivity(liststore.o, TRUE);
 
   gtk_tree_path_free(path);
 }
@@ -137,6 +151,7 @@ static void delete_selected_action(Gtkwindow window, gint answer, Treeview treev
     if (gtk_tree_selection_get_selected(selection.s, NULL, &iter)) {
       liststore.t = gtk_tree_view_get_model(treeview.t);
       gtk_list_store_remove(liststore.l, &iter);
+      set_sensitivity(liststore.o, TRUE);
     }
   }
 
@@ -250,6 +265,7 @@ static void save_actions(Button button, Treeview treeview)
     }
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
+  set_sensitivity(liststore.o, FALSE);
 
   write_keyfile(key_file, config_file);
   g_key_file_free(key_file);
@@ -383,6 +399,12 @@ static Widget create_settings(void)
   button.w = gtk_button_new_with_mnemonic("_Save");
   g_signal_connect(button.o, "clicked", G_CALLBACK(save_actions), treeview.t);
   gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
+
+  /* Put the save button in the treeview so we can set its sensitivity
+   * when something changes */
+  g_object_set_data(liststore.o, "savebutton", button.o);
+  gtk_widget_set_sensitive(button.w, FALSE);
+  unsaved = FALSE;
 
   /* Quit button */
   button.w = gtk_button_new_with_mnemonic("_Quit");
