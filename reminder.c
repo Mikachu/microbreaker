@@ -23,31 +23,9 @@ enum {
   COL_DATEVAL
 };
 
-static gboolean gtk_tree_view_get_selected(Treeview treeview, Treeiter *iter);
-static void set_sensitivity(GObject *object, gboolean sensitive);
-static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
-                         Liststore liststore);
-static void cell_edited(Cellrenderer renderer, const gchar *path_string,
-                        gchar *new_text, Liststore liststore);
-static void new_action(Button button, Treeview treeview);
-static void delete_response(Gtkwindow window, gint answer, Treeview treeview);
-static void confirm_delete_action(Button button, Treeview treeview);
-static void selected_action(Treeselection selection, Button delete);
-static void load_actions(Liststore liststore);
-static void write_keyfile(GKeyFile *key_file, const gchar *config_file);
-static void save_actions(Button button, Treeview treeview);
-static Treeviewcolumn new_column(const gchar *name, Liststore store, gint c, gboolean check);
 static gboolean check_actions(Liststore liststore);
-static Widget create_settings(Gtkwindow dialog);
-static Gtkwindow create_dialog(void);
 
-static gboolean gtk_tree_view_get_selected(Treeview treeview, Treeiter *iter)
-{
-  Treeselection selection;
-
-  selection.s = gtk_tree_view_get_selection(treeview.t);
-  return gtk_tree_selection_get_selected(selection.s, NULL, iter);
-}
+#include "trivial.c"
 
 static void set_sensitivity(GObject *object, gboolean sensitive)
 {
@@ -208,11 +186,6 @@ static void confirm_delete_action(Button button, Treeview treeview)
   }
 }
 
-static void selected_action(Treeselection selection, Button delete)
-{
-  gtk_widget_set_sensitive(delete.w, gtk_tree_selection_get_selected(selection.s, NULL, NULL));
-}
-
 static const gchar *tv_sec_to_iso8601(gint tv_sec)
 {
   GTimeVal time;
@@ -313,13 +286,6 @@ static void save_actions(Button button, Treeview treeview)
   g_free(config_file);
 }
 
-static void quit_response(Gtkwindow window, gint answer, void *unused)
-{
-  if (answer == GTK_RESPONSE_YES)
-    gtk_main_quit();
-  gtk_widget_destroy(window.w);
-}
-
 static void confirm_quit(Button button, GObject *object)
 {
   if (g_object_get_data(object, "unsaved")) {
@@ -328,7 +294,7 @@ static void confirm_quit(Button button, GObject *object)
                                        GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
                                        GTK_MESSAGE_WARNING, GTK_BUTTONS_YES_NO,
                                        "There are unsaved changes, quit anyway?");
-    g_signal_connect(confirm.o, "response", G_CALLBACK(quit_response), NULL);
+    g_signal_connect(confirm.o, "response", G_CALLBACK(gtk_quit_on_yes), NULL);
     gtk_widget_show_all(confirm.w);
   } else
     gtk_main_quit();
@@ -457,7 +423,7 @@ static Widget create_settings(Gtkwindow dialog)
   /* Pass the delete button to the selection object so we can toggle
    * sensitivity when columns are selected */
   selection.s = gtk_tree_view_get_selection(treeview.t);
-  g_signal_connect(selection.o, "changed", G_CALLBACK(selected_action), button.w);
+  g_signal_connect(selection.o, "changed", G_CALLBACK(gtk_sensitive_when_selected), button.w);
 
   /* Save button */
   button.w = gtk_button_new_with_mnemonic("_Save");
@@ -469,6 +435,11 @@ static Widget create_settings(Gtkwindow dialog)
   g_object_set_data(liststore.o, "savebutton", button.o);
   gtk_widget_set_sensitive(button.w, FALSE);
   g_object_set_data(liststore.o, "unsaved", GINT_TO_POINTER(FALSE));
+
+  /* Close button */
+  button.w = gtk_button_new_with_mnemonic("_Close");
+  g_signal_connect(button.o, "clicked", G_CALLBACK(gtk_widget_hide_2nd_arg), dialog.o);
+  gtk_box_pack_start(hbox.b, button.w, TRUE, TRUE, 0);
 
   /* Quit button */
   button.w = gtk_button_new_with_mnemonic("_Quit");
