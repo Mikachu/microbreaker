@@ -341,8 +341,6 @@ static glong get_epochseconds(void)
   return time.tv_sec;
 }
 
-/* This function should not be run every minute.
- * It should be possible to set up some g_timeout_add() for each action. */
 static gboolean check_actions(Liststore liststore)
 {
   Treeiter iter;
