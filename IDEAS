@@ -1,0 +1,7 @@
+* Add dependencies, so a task only fires when another one does.
+    For example I floss my teeth every for days, so it should only be shown
+    when the teeth brushing task triggers.
+* Time based tasks
+* And some combination of the above, so you can have a task that triggers at
+  08:00, but only every 3 days, etc.
+* Low/High priority tasks with different notify icons.
