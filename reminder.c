@@ -317,8 +317,7 @@ static gboolean check_actions(Liststore liststore)
 {
   Treeiter iter;
   gboolean valid;
-  gint num_expired = 0;
-  gint num_postponed = 0;
+  AlertLevel level = ALERT_IDLE;
   glong now = get_epochseconds();
   gint timepassed, nearesttimeout = 0;
 
@@ -335,24 +334,19 @@ static gboolean check_actions(Liststore liststore)
                        -1);
     timepassed = now - lastdone;
     interval*=3600;
-    if (postponed)
-      num_postponed++;
-    if (expired)
-      num_expired++;
-    else if (timepassed >= interval) {
+    if (postponed) {
+      if (level == ALERT_IDLE)
+        level = ALERT_POSTPONED;
+    } else if (expired) {
+      level = ALERT_ALERT;
+    } else if (timepassed >= interval) {
       gtk_list_store_set(liststore.l, &iter, COL_EXPIRED, TRUE, -1);
-      num_expired++;
+      level = ALERT_ALERT;
     } else if (!nearesttimeout || interval - timepassed < nearesttimeout)
       nearesttimeout = interval - timepassed;
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
-  if (num_expired) {
-    if (num_postponed == num_expired)
-      set_icon_alert(ALERT_POSTPONED);
-    else
-      set_icon_alert(ALERT_ALERT);
-  } else
-    set_icon_alert(ALERT_IDLE);
+  set_icon_alert(level);
   if (nearesttimeout)
     g_timeout_add_seconds(nearesttimeout, (GSourceFunc)check_actions, liststore.t);
   /* Don't repeat timeout */
