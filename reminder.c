@@ -8,6 +8,8 @@
 /* nicer gtk interface */
 #include "gtkunion.h"
 
+#include "reminder.h"
+
 /* #ifdef DOCKAPP */
 #include "dockapp.h"
 
@@ -20,7 +22,9 @@ enum {
   COL_INTERVAL,
   COL_DATESTRING,
   COL_EXPIRED,
-  COL_DATEVAL
+  COL_POSTPONED,
+  COL_DATEVAL,
+  NUMBER_OF_COLUMNS
 };
 
 static gboolean check_actions(Liststore liststore);
@@ -50,27 +54,43 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
 {
   Treeiter iter;
   GTimeVal time;
-  gint interval, lastdone;
-  gboolean expired;
+  gint interval, lastdone, column;
+  gboolean expired, postponed;
 
-  g_get_current_time(&time);
   gtk_tree_model_get_iter_from_string(liststore.t, &iter, path_string);
   gtk_tree_model_get(liststore.t, &iter,
                      COL_INTERVAL, &interval,
                      COL_DATEVAL,  &lastdone,
                      COL_EXPIRED,  &expired,
+                     COL_POSTPONED,&postponed,
                      -1);
-  if (!expired || (time.tv_sec - lastdone)/(60*60) >= interval)
+
+  column = GPOINTER_TO_INT(g_object_get_data(renderer.o, "column"));
+  switch (column) {
+  case COL_EXPIRED:
+    g_get_current_time(&time);
+    if (!expired || (time.tv_sec - lastdone)/(60*60) >= interval)
+      gtk_list_store_set(liststore.l, &iter,
+                         COL_DATESTRING, g_time_val_to_iso8601(&time),
+                         COL_DATEVAL,    time.tv_sec,
+                         COL_EXPIRED,    FALSE,
+                         COL_POSTPONED,  FALSE,
+                         -1);
+    else
+      gtk_list_store_set(liststore.l, &iter,
+                         COL_EXPIRED,    FALSE,
+                         COL_POSTPONED,  FALSE,
+                         -1);
+    set_save_sensitivity(liststore.o, TRUE);
+    break;
+  case COL_POSTPONED:
+    if (!expired)
+      /* Can't postpone something that isn't due yet. */
+      return;
     gtk_list_store_set(liststore.l, &iter,
-                       COL_DATESTRING, g_time_val_to_iso8601(&time),
-                       COL_DATEVAL,    time.tv_sec,
-                       COL_EXPIRED,    FALSE,
+                       COL_POSTPONED, !postponed,
                        -1);
-  else
-    gtk_list_store_set(liststore.l, &iter,
-                       COL_EXPIRED,    FALSE,
-                       -1);
-  set_save_sensitivity(liststore.o, TRUE);
+  }
   check_actions(liststore);
 }
 
@@ -297,34 +317,42 @@ static gboolean check_actions(Liststore liststore)
 {
   Treeiter iter;
   gboolean valid;
-  gboolean no_expired = TRUE;
+  gint num_expired = 0;
+  gint num_postponed = 0;
   glong now = get_epochseconds();
   gint timepassed, nearesttimeout = 0;
 
   valid = gtk_tree_model_get_iter_first(liststore.t, &iter);
   while (valid) {
-    gboolean expired;
+    gboolean expired, postponed;
     gint interval, lastdone;
     
     gtk_tree_model_get(liststore.t, &iter,
                        COL_INTERVAL, &interval,
                        COL_EXPIRED,  &expired,
                        COL_DATEVAL,  &lastdone,
+                       COL_POSTPONED,&postponed,
                        -1);
     timepassed = now - lastdone;
     interval*=3600;
+    if (postponed)
+      num_postponed++;
     if (expired)
-      no_expired = FALSE;
+      num_expired++;
     else if (timepassed >= interval) {
       gtk_list_store_set(liststore.l, &iter, COL_EXPIRED, TRUE, -1);
-      set_icon_alert(TRUE);
-      no_expired = FALSE;
+      num_expired++;
     } else if (!nearesttimeout || interval - timepassed < nearesttimeout)
       nearesttimeout = interval - timepassed;
     valid = gtk_tree_model_iter_next(liststore.t, &iter);
   }
-  if (no_expired)
-    set_icon_alert(FALSE);
+  if (num_expired) {
+    if (num_postponed == num_expired)
+      set_icon_alert(ALERT_POSTPONED);
+    else
+      set_icon_alert(ALERT_ALERT);
+  } else
+    set_icon_alert(ALERT_IDLE);
   if (nearesttimeout)
     g_timeout_add_seconds(nearesttimeout, (GSourceFunc)check_actions, liststore.t);
   /* Don't repeat timeout */
@@ -365,8 +393,9 @@ static Widget create_settings(Gtkwindow dialog)
   /* Create a new liststore and attach it to a treeview, the fifth column is
    * used for caching the last done date as an integer so we don't have to parse
    * the iso8601 representation so often. */
-  liststore.l = gtk_list_store_new(5, G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING,
-                                      G_TYPE_BOOLEAN, G_TYPE_INT);
+  liststore.l = gtk_list_store_new(NUMBER_OF_COLUMNS,
+                                   G_TYPE_STRING, G_TYPE_INT, G_TYPE_STRING,
+                                   G_TYPE_BOOLEAN, G_TYPE_BOOLEAN, G_TYPE_INT);
   g_object_set_data(liststore.o, "dialog", dialog.o);
   g_object_set_data(dialog.o, "liststore", liststore.o);
 
@@ -379,6 +408,7 @@ static Widget create_settings(Gtkwindow dialog)
   gtk_tree_view_append_column(treeview.t, new_column("Interval",  liststore, COL_INTERVAL,   FALSE).c);
   gtk_tree_view_append_column(treeview.t, new_column("Last Done", liststore, COL_DATESTRING, FALSE).c);
   gtk_tree_view_append_column(treeview.t, new_column("Expired",   liststore, COL_EXPIRED,     TRUE).c);
+  gtk_tree_view_append_column(treeview.t, new_column("Postponed", liststore, COL_POSTPONED,   TRUE).c);
 
   /* Load up our actions into the liststore */
   load_actions(liststore);
@@ -442,7 +472,7 @@ static Gtkwindow create_dialog(void)
   Gtkwindow dialog;
   dialog.w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(dialog.d, "Reminder");
-  gtk_window_set_default_size(dialog.d, 400, 300);
+  gtk_window_set_default_size(dialog.d, 500, 300);
   gtk_window_set_position(dialog.d, GTK_WIN_POS_CENTER);
   g_signal_connect(dialog.o, "delete-event", G_CALLBACK(gtk_widget_hide), NULL);
 

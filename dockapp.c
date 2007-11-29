@@ -11,25 +11,27 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/shape.h>
 #include "pixmaps/alert.xpm"
+#include "pixmaps/postponed.xpm"
 #include "pixmaps/idle.xpm"
 
 /* nicer gtk interface */
 #include "gtkunion.h"
 /* prototypes */
+#include "reminder.h"
 #include "dockapp.h"
 
 static Plug dockchild;
 static GdkWindow *gdkdockapp;
 static Image image;
-static GdkPixmap *alert_pixmap, *idle_pixmap;
-static GdkBitmap *alert_bitmap, *idle_bitmap;
+static GdkPixmap *pixmap[NUM_ALERT];
+static GdkBitmap *bitmap[NUM_ALERT];
 
 static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, Gtkwindow dialog);
 
-void set_icon_alert(gboolean alert)
+void set_icon_alert(AlertLevel level)
 {
-  gtk_image_set_from_pixmap(image.i, alert ? alert_pixmap : idle_pixmap, NULL);
-  gdk_window_shape_combine_mask(gdkdockapp, alert ? alert_bitmap : idle_bitmap, 0, 0);
+  gtk_image_set_from_pixmap(image.i, pixmap[level], NULL);
+  gdk_window_shape_combine_mask(gdkdockapp, bitmap[level], 0, 0);
 }
 
 static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, Gtkwindow dialog)
@@ -66,8 +68,9 @@ void create_icon(Gtkwindow dialog, int argc, char *argv[])
 
   gtk_widget_realize(dockchild.w);
 
-  alert_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &alert_bitmap, NULL, alert_xpm);
-  idle_pixmap = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &idle_bitmap, NULL, idle_xpm);
+  pixmap[ALERT_IDLE] = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[ALERT_IDLE], NULL, idle_xpm);
+  pixmap[ALERT_POSTPONED] = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[ALERT_POSTPONED], NULL, postponed_xpm);
+  pixmap[ALERT_ALERT] = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[ALERT_ALERT], NULL, alert_xpm);
 
   image.w = gtk_image_new();
   set_icon_alert(FALSE);
