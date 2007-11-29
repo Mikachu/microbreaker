@@ -47,8 +47,6 @@ static Gtkwindow get_dialog(GObject *object)
   return dialog;
 }
 
-/* Automatically updates the last done time to the current time, unless
- * the user has already updated the date and the task is currently expired. */
 static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
                          Liststore liststore)
 {
@@ -69,6 +67,8 @@ static void cell_toggled(Cellrenderer renderer, const gchar *path_string,
   switch (column) {
   case COL_EXPIRED:
     g_get_current_time(&time);
+    /* Automatically update the last done time to the current time, unless
+     * the user has already updated the date and the task is currently expired. */
     if (!expired || (time.tv_sec - lastdone)/(60*60) >= interval)
       gtk_list_store_set(liststore.l, &iter,
                          COL_DATESTRING, g_time_val_to_iso8601(&time),
@@ -334,7 +334,7 @@ static gboolean check_actions(Liststore liststore)
                        -1);
     timepassed = now - lastdone;
     interval*=3600;
-    if (postponed) {
+    if (expired && postponed) {
       if (level == ALERT_IDLE)
         level = ALERT_POSTPONED;
     } else if (expired) {
