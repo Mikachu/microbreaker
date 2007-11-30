@@ -394,6 +394,7 @@ static Widget create_tasks_page(Gtkwindow dialog)
   g_object_set_data(dialog.o, "liststore", liststore.o);
 
   treeview.w = gtk_tree_view_new_with_model(liststore.t);
+  g_object_set_data(dialog.o, "treeview", treeview.o);
   /* this makes gtk+ draw rows in alternating colors which makes things easier to read */
   gtk_tree_view_set_rules_hint(treeview.t, TRUE);
   gtk_tree_view_set_headers_visible(treeview.t, TRUE);  
@@ -461,19 +462,40 @@ static Widget create_tasks_page(Gtkwindow dialog)
   return vbox.w;
 }
 
+static void update_details(Notebook note, GtkNotebookPage *page, guint page_num, Gtkwindow dialog)
+{
+  Treeview treeview;
+  Liststore liststore;
+  Treeiter iter;
+  gchar *name = NULL;
+
+  treeview.o = g_object_get_data(dialog.o, "treeview");
+  liststore.t = gtk_tree_view_get_model(treeview.t);
+
+  if (gtk_tree_view_get_selected(treeview, &iter)) {
+    gtk_tree_model_get(liststore.t, &iter,
+                       COL_NAME, &name,
+                       -1);
+    Label label;
+    label.o = g_object_get_data(dialog.o, "name");
+    gtk_label_set_text(label.l, name);
+  }
+}
+
 static Widget create_details_page(Gtkwindow dialog)
 {
-  Liststore liststore;
+  Label label;
 
-  liststore.o = g_object_get_data(dialog.o, "liststore");
-
-  return gtk_label_new("HELLO");
+  label.w = gtk_label_new("HELLO");
+  g_object_set_data(dialog.o, "name", label.o);
+  return label.w;
 }
 
 static Gtkwindow create_dialog(void)
 {
   Gtkwindow dialog;
   Notebook note;
+
   dialog.w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(dialog.d, "Reminder");
   gtk_window_set_default_size(dialog.d, 500, 300);
@@ -485,6 +507,7 @@ static Gtkwindow create_dialog(void)
   gtk_container_add(dialog.c, note.w);
   gtk_notebook_append_page(note.n, create_tasks_page(dialog), gtk_label_new("Tasks"));
   gtk_notebook_append_page(note.n, create_details_page(dialog), gtk_label_new("Details"));
+  g_signal_connect(note.o, "switch-page", G_CALLBACK(update_details), dialog.o);
   gtk_window_set_icon(dialog.d, gdk_pixbuf_new_from_xpm_data((const char **)&icon_xpm));
 
   return dialog;
