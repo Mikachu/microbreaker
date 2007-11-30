@@ -498,7 +498,7 @@ static Hbox create_label_and_button(gchar *name, Gtkwindow dialog)
   label.w = gtk_label_new(name);
   entry.w = gtk_entry_new();
 
-  gtk_box_pack_start(hbox.b, label.w, TRUE, TRUE, 0);
+  gtk_box_pack_start(hbox.b, label.w, FALSE, TRUE, 0);
   gtk_box_pack_start(hbox.b, entry.w, TRUE, TRUE, 0);
   g_object_set_data(dialog.o, name, entry.o);
 
@@ -510,9 +510,10 @@ static Widget create_details_page(Gtkwindow dialog)
   Vbox vbox;
 
   vbox.w = gtk_vbox_new(TRUE, PADDING);
-  gtk_box_pack_start(vbox.b, create_label_and_button("Name", dialog).w, TRUE, TRUE, 0);
-  gtk_box_pack_start(vbox.b, create_label_and_button("Interval", dialog).w, TRUE, TRUE, 0);
-  gtk_box_pack_start(vbox.b, create_label_and_button("Last Done", dialog).w, TRUE, TRUE, 0);
+  /* Use a GtkTable */
+  gtk_box_pack_start(vbox.b, create_label_and_button("Name", dialog).w, FALSE, TRUE, 0);
+  gtk_box_pack_start(vbox.b, create_label_and_button("Interval", dialog).w, FALSE, TRUE, 0);
+  gtk_box_pack_start(vbox.b, create_label_and_button("Last Done", dialog).w, FALSE, TRUE, 0);
 
   return vbox.w;
 }
