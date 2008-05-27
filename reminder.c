@@ -23,9 +23,11 @@ static GdkWindow *gdkdockapp;
 static Image image;
 static GdkPixmap *pixmap[2];
 static GdkBitmap *bitmap[2];
+static int alert;
 
 void set_icon_alert(int on)
 {
+  alert = on;
   gtk_image_set_from_pixmap(image.i, pixmap[on], NULL);
   gdk_window_shape_combine_mask(gdkdockapp, bitmap[on], 0, 0);
 }
@@ -40,7 +42,9 @@ static gboolean check_actions(gpointer nodata)
 static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, gpointer nodata)
 {
   if (event->button == 1) {
-    set_icon_alert(0);
+    if (alert)
+      set_icon_alert(0);
+    while (g_source_remove_by_user_data(NULL));
     g_timeout_add_seconds(300, (GSourceFunc)check_actions, NULL);
     return TRUE;
   }
@@ -76,7 +80,7 @@ void create_icon(int argc, char *argv[])
   pixmap[1] = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[1], NULL, alert_xpm);
 
   image.w = gtk_image_new();
-  set_icon_alert(FALSE);
+  set_icon_alert(0);
   gtk_container_add(dockchild.c, image.w);
 
   gtk_widget_show_all(dockchild.w);
@@ -93,7 +97,7 @@ int main(int argc, char *argv[])
 
   create_icon(argc, argv);
 
-  check_actions(NULL);
+  g_timeout_add_seconds(300, (GSourceFunc)check_actions, NULL);
 
   gtk_main();
 
