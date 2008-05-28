@@ -1,5 +1,5 @@
 /* XPM */
-static char * alert_xpm[] = {
+static char * break_xpm[] = {
 "64 24 4 1",
 " 	c None",
 ".	c #40E6DB",
