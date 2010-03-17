@@ -28,6 +28,7 @@ static Image image;
 static GdkPixmap *pixmap[NUMICONS];
 static GdkBitmap *bitmap[NUMICONS];
 static Break breaktime;
+static gint delay = 300;
 
 static void set_icon_state(Break on)
 {
@@ -43,15 +44,45 @@ static gboolean break_timeout(gpointer nodata)
   return FALSE;
 }
 
+static void reset_break()
+{
+  if (breaktime == BREAK)
+    set_icon_state(IDLE);
+  while (g_source_remove_by_user_data(NULL));
+  g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, NULL);
+}
+
+static gboolean set_delay(Gtkwindow dialog, GdkEvent *event, Entry entry)
+{
+  delay = atoi(gtk_entry_get_text(entry.e));
+  gtk_widget_hide(dialog.w);
+  reset_break();
+}
+
 static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, gpointer nodata)
 {
   if (event->button == 1) {
-    if (breaktime)
-      set_icon_state(IDLE);
-    while (g_source_remove_by_user_data(NULL));
-    g_timeout_add_seconds(300, (GSourceFunc)break_timeout, NULL);
+    reset_break();
     return TRUE;
+  } else if (event->button == 3) {
+    static Gtkwindow dialog = { NULL };
+    Entry entry;
+
+    if (!dialog.w) {
+      dialog.w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+      gtk_window_set_title(dialog.d, "Microbreaker");
+      gtk_window_set_position(dialog.d, GTK_WIN_POS_CENTER);
+
+      entry.w = gtk_entry_new();
+
+      gtk_container_add(dialog.c, entry.w);
+
+      g_signal_connect(dialog.o, "delete-event", G_CALLBACK(set_delay), entry.w);
+    }
+
+    gtk_widget_show_all(dialog.w);
   }
+
   return FALSE;
 }
 
@@ -106,7 +137,7 @@ int main(int argc, char *argv[])
 
   create_icon(argc, argv);
 
-  g_timeout_add_seconds(300, (GSourceFunc)break_timeout, NULL);
+  g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, NULL);
 
   gtk_main();
 
