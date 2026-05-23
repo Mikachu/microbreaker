@@ -48,8 +48,8 @@ static void reset_break()
 {
   if (breaktime == BREAK)
     set_icon_state(IDLE);
-  while (g_source_remove_by_user_data(NULL));
-  g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, NULL);
+  while (g_source_remove_by_user_data(&gdkdockapp));
+  g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, &gdkdockapp);
 }
 
 static gboolean set_delay(Gtkwindow dialog, GdkEvent *event, Entry entry)
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 
   create_icon(argc, argv);
 
-  g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, NULL);
+  reset_break();
 
   gtk_main();
 

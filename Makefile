@@ -2,7 +2,7 @@ CC=gcc
 SPARSE=sparse
 
 all:
-	$(CC) `pkg-config gtk+-2.0 --cflags --libs` microbreaker.c -o microbreaker $(CFLAGS)
+	$(CC) `pkg-config x11 gtk+-2.0 --cflags --libs` microbreaker.c -o microbreaker $(CFLAGS)
 
 clean:
 	rm -f microbreaker
