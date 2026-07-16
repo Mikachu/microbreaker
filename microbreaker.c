@@ -1,8 +1,5 @@
-#include <stdio.h>
 #include <gtk/gtk.h>
 #include <glib.h>
-#include <sys/utsname.h>
-#include <string.h>
 #include <stdlib.h>
 
 /* nicer gtk interface */
@@ -26,7 +23,6 @@ typedef enum {
   NUMICONS
 } Break;
 
-static Plug dockchild;
 static GdkWindow *gdkdockapp;
 static Image image;
 static GdkPixmap *pixmap[NUMICONS];
@@ -155,6 +151,7 @@ static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, gpointe
 static void create_icon(int argc, char *argv[])
 {
   Window dockapp;
+  static Plug dockchild;
   XWMHints *wm_hints;
 
   g_assert( idle_xpm[0][0] == '6' &&  idle_xpm[0][1] == '4' &&
