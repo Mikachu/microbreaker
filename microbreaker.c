@@ -30,13 +30,13 @@ static GdkBitmap *bitmap[NUMICONS];
 static Break breaktime;
 static gint delay = 300;
 static guint timeout_id = 0;
-static gchar *tooltip_text = NULL;
+static Label tooltip_label = { .l = NULL };
+static gboolean tooltip_stale = TRUE;
 
 static void set_icon_state(Break on)
 {
   breaktime = on;
-  g_clear_pointer(&tooltip_text, g_free);
-  gtk_tooltip_trigger_tooltip_query(gdk_display_get_default());  
+  gtk_tooltip_trigger_tooltip_query(gdk_display_get_default());
   gtk_image_set_from_pixmap(image.i, pixmap[on], NULL);
   gdk_window_shape_combine_mask(gdkdockapp, bitmap[on], 0, 0);
 }
@@ -45,6 +45,7 @@ static gboolean break_timeout(gpointer nodata)
 {
   timeout_id = 0;
   set_icon_state(BREAK);
+  tooltip_stale = TRUE;
   /* Don't repeat timeout */
   return FALSE;
 }
@@ -53,6 +54,7 @@ static void reset_break()
 {
   g_clear_handle_id(&timeout_id, g_source_remove);
   timeout_id = g_timeout_add_seconds(delay, (GSourceFunc)break_timeout, &gdkdockapp);
+  tooltip_stale = TRUE;
   if (breaktime == BREAK)
     set_icon_state(IDLE);
 }
@@ -64,38 +66,31 @@ static gboolean set_delay(Gtkwindow dialog, GdkEvent *event, Entry entry)
   reset_break();
 }
 
-struct _GtkTooltip
-{
-  GObject parent_instance;
-  GtkWidget *window;
-  /* and a bunch of other gunk */
-};
-
 static gboolean query_tooltip(GtkWidget *widget, gint x, gint y,
                               gboolean keyboard_mode, GtkTooltip *tooltip,
                               gpointer nodata)
 {
-  if (!GTK_WIDGET_MAPPED(tooltip->window)) {
-    g_free(tooltip_text);
-    tooltip_text = NULL;
-  }
-  if (!tooltip_text) {
+  /* custom widget is unparented by gtk_tooltip_window_hide when tooltip hides */
+  if (tooltip_stale || !gtk_widget_get_parent(tooltip_label.w)) {
+    tooltip_stale = FALSE;
     if (breaktime == BREAK) {
-      tooltip_text = g_strdup("Break time!");
+      gtk_label_set_text(tooltip_label.l, "Break time!");
     } else {
       GSource *src;
       if (timeout_id && (src = g_main_context_find_source_by_id(NULL, timeout_id))) {
+        char text[32];
         gint64 remaining_us = g_source_get_ready_time(src) - g_get_monotonic_time();
         gint remaining_s = (gint)(remaining_us / G_USEC_PER_SEC);
         if (remaining_s < 0) remaining_s = 0;
-        tooltip_text = g_strdup_printf("%d:%02d until break", remaining_s / 60, remaining_s % 60);
+        snprintf(text, sizeof(text), "%d:%02d until break", remaining_s / 60, remaining_s % 60);
+        gtk_label_set_text(tooltip_label.l, text);
       } else {
-        tooltip_text = g_strdup("Break imminent");
+        gtk_label_set_text(tooltip_label.l, "Break imminent");
       }
     }
   }
-  gtk_tooltip_set_text(tooltip, tooltip_text);
 
+  gtk_tooltip_set_custom(tooltip, tooltip_label.w);
   return TRUE;
 }
 
@@ -103,6 +98,7 @@ static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, gpointe
 {
   if (event->button == 1) {
     reset_break();
+    gtk_tooltip_trigger_tooltip_query(gdk_display_get_default());
     return TRUE;
   } else if (event->button == 3) {
     static Gtkwindow dialog = { NULL };
@@ -162,6 +158,9 @@ static void create_icon(int argc, char *argv[])
 
   pixmap[IDLE]  = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[IDLE],  NULL, idle_xpm);
   pixmap[BREAK] = gdk_pixmap_create_from_xpm_d(dockchild.w->window, &bitmap[BREAK], NULL, break_xpm);
+
+  tooltip_label.w = gtk_label_new(NULL);
+  g_object_ref_sink(tooltip_label.w);
 
   image.w = gtk_image_new();
   set_icon_state(IDLE);
