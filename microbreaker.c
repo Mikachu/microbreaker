@@ -10,11 +10,15 @@
 
 /* dockapp stuff */
 #include <gdk/gdk.h>
+#include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/shape.h>
 #include "pixmaps/break.xpm"
 #include "pixmaps/idle.xpm"
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 typedef enum {
   IDLE,
@@ -28,7 +32,9 @@ static Image image;
 static GdkPixmap *pixmap[NUMICONS];
 static GdkBitmap *bitmap[NUMICONS];
 static Break breaktime;
-static gint delay = 300;
+#define DEFAULT_DELAY 300
+#define DEFAULT_DELAY_STR TOSTRING(DEFAULT_DELAY)
+static gint delay = DEFAULT_DELAY;
 static guint timeout_id = 0;
 static Label tooltip_label = { .l = NULL };
 static gboolean tooltip_stale = TRUE;
@@ -59,11 +65,31 @@ static void reset_break()
     set_icon_state(IDLE);
 }
 
-static gboolean set_delay(Gtkwindow dialog, GdkEvent *event, Entry entry)
+static void set_delay(Gtkwindow dialog, Entry entry)
 {
   delay = atoi(gtk_entry_get_text(entry.e));
   gtk_widget_hide(dialog.w);
   reset_break();
+}
+
+static gboolean dialog_delete_cb(Gtkwindow dialog, GdkEvent *event, Entry entry)
+{
+  set_delay(dialog, entry);
+  return TRUE;
+}
+
+static void entry_activate_cb(Entry entry, Gtkwindow dialog)
+{
+  set_delay(dialog, entry);
+}
+
+static gboolean entry_keypress_cb(Entry entry, GdkEventKey *event, Gtkwindow dialog)
+{
+  if (event->keyval == GDK_Escape) {
+    gtk_widget_hide(dialog.w);
+    return TRUE;
+  }
+  return FALSE;
 }
 
 static gboolean query_tooltip(GtkWidget *widget, gint x, gint y,
@@ -102,18 +128,21 @@ static gboolean handle_dock_event(Plug dockchild, GdkEventButton *event, gpointe
     return TRUE;
   } else if (event->button == 3) {
     static Gtkwindow dialog = { NULL };
-    Entry entry;
 
     if (!dialog.w) {
+      Entry entry;
       dialog.w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
       gtk_window_set_title(dialog.d, "Microbreaker");
       gtk_window_set_position(dialog.d, GTK_WIN_POS_CENTER);
 
       entry.w = gtk_entry_new();
+      gtk_entry_set_text(entry.e, DEFAULT_DELAY_STR);
 
       gtk_container_add(dialog.c, entry.w);
 
-      g_signal_connect(dialog.o, "delete-event", G_CALLBACK(set_delay), entry.w);
+      g_signal_connect(dialog.o, "delete-event", G_CALLBACK(dialog_delete_cb), entry.w);
+      g_signal_connect(entry.o, "activate", G_CALLBACK(entry_activate_cb), dialog.w);
+      g_signal_connect(entry.o, "key-press-event", G_CALLBACK(entry_keypress_cb), dialog.w);
     }
 
     gtk_widget_show_all(dialog.w);
